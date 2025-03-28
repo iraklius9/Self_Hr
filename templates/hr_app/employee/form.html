@@ -1,0 +1,157 @@
+{% extends 'hr_app/base.html' %}
+{% load static %}
+
+{% block title %}
+    {% if form.instance.pk %}
+        {{ employee.get_full_name }} - რედაქტირება
+    {% else %}
+        ახალი თანამშრომელი
+    {% endif %} 
+    - HR სისტემა
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">
+                        {% if form.instance.pk %}
+                            თანამშრომლის რედაქტირება
+                        {% else %}
+                            ახალი თანამშრომლის დამატება
+                        {% endif %}
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    {{ form.first_name.label_tag }}
+                                    {{ form.first_name }}
+                                    {% if form.first_name.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ form.first_name.errors.0 }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    {{ form.last_name.label_tag }}
+                                    {{ form.last_name }}
+                                    {% if form.last_name.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ form.last_name.errors.0 }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    {{ form.email.label_tag }}
+                                    {{ form.email }}
+                                    {% if form.email.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ form.email.errors.0 }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    {{ form.phone.label_tag }}
+                                    {{ form.phone }}
+                                    {% if form.phone.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ form.phone.errors.0 }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.address.label_tag }}
+                            {{ form.address }}
+                            {% if form.address.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.address.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    {{ form.job_title.label_tag }}
+                                    {{ form.job_title }}
+                                    {% if form.job_title.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ form.job_title.errors.0 }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    {{ form.department.label_tag }}
+                                    {{ form.department }}
+                                    {% if form.department.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ form.department.errors.0 }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    {{ form.manager.label_tag }}
+                                    {{ form.manager }}
+                                    {% if form.manager.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ form.manager.errors.0 }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    {{ form.start_date.label_tag }}
+                                    {{ form.start_date }}
+                                    {% if form.start_date.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ form.start_date.errors.0 }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="text-end">
+                            <a href="{% url 'employee-list' %}" class="btn btn-secondary">გაუქმება</a>
+                            <button type="submit" class="btn btn-primary">
+                                {% if form.instance.pk %}
+                                    შენახვა
+                                {% else %}
+                                    დამატება
+                                {% endif %}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

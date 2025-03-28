@@ -1,0 +1,71 @@
+{% extends 'hr_app/base.html' %}
+{% load static %}
+
+{% block title %}დეპარტამენტები - HR სისტემა{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>დეპარტამენტები</h2>
+        {% if user.role.role in 'admin,hr_manager' %}
+        <a href="{% url 'department-create' %}" class="btn btn-primary">
+            <i class="bi bi-plus-lg"></i> ახალი დეპარტამენტი
+        </a>
+        {% endif %}
+    </div>
+
+    <div class="row">
+        {% for department in department_list %}
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">{{ department.name }}</h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">{{ department.description|default:"აღწერა არ არის" }}</p>
+                    <hr>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <p class="mb-0"><strong>თანამშრომლები:</strong> {{ department.employee_set.count }}</p>
+                        </div>
+                        {% if user.role.role in 'admin,hr_manager' %}
+                        <a href="{% url 'department-update' department.pk %}" class="btn btn-sm btn-warning">
+                            <i class="bi bi-pencil"></i> რედაქტირება
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="alert alert-info">დეპარტამენტები არ არის</div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if is_paginated %}
+    <nav class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}">წინა</a>
+            </li>
+            {% endif %}
+            
+            {% for num in page_obj.paginator.page_range %}
+            <li class="page-item {% if page_obj.number == num %}active{% endif %}">
+                <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+            </li>
+            {% endfor %}
+            
+            {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}">შემდეგი</a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+{% endblock %} 

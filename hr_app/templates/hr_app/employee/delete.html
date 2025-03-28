@@ -1,0 +1,22 @@
+{% extends 'hr_app/base.html' %}
+{% load django_bootstrap5 %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header">
+            <h3>თანამშრომლის წაშლა</h3>
+        </div>
+        <div class="card-body">
+            <p>დარწმუნებული ხართ, რომ გსურთ წაშალოთ თანამშრომელი "{{ object.get_full_name }}"?</p>
+            <form method="post">
+                {% csrf_token %}
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-danger">წაშლა</button>
+                    <a href="{% url 'employee-list' %}" class="btn btn-secondary">გაუქმება</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %} 

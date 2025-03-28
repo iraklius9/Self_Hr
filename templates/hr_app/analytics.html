@@ -1,0 +1,64 @@
+{% extends "hr_app/base.html" %}
+{% block title %}ანალიტიკა - HR სისტემა{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5>დასწრების სტატისტიკა</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="attendanceChart"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5>შვებულებების განაწილება</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="leaveChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Attendance chart
+    const attendanceCtx = document.getElementById('attendanceChart').getContext('2d');
+    new Chart(attendanceCtx, {
+        type: 'line',
+        data: {
+            labels: {{ dates|safe }},
+            datasets: [{
+                label: 'დასწრება',
+                data: {{ attendance_data|safe }},
+                borderColor: 'rgba(75, 192, 192, 1)',
+                tension: 0.1
+            }]
+        }
+    });
+    
+    // Leave chart
+    const leaveCtx = document.getElementById('leaveChart').getContext('2d');
+    new Chart(leaveCtx, {
+        type: 'pie',
+        data: {
+            labels: ['შვებულება', 'ავადმყოფობა', 'სხვა'],
+            datasets: [{
+                data: {{ leave_data|safe }},
+                backgroundColor: [
+                    'rgba(54, 162, 235, 0.6)',
+                    'rgba(255, 99, 132, 0.6)',
+                    'rgba(255, 206, 86, 0.6)'
+                ]
+            }]
+        }
+    });
+</script>
+{% endblock %} 

@@ -1,0 +1,102 @@
+{% extends "hr_app/base.html" %}
+{% load django_bootstrap5 %}
+
+{% block title %}
+    {% if form.instance.pk %}
+        შვებულების მოთხოვნის რედაქტირება
+    {% else %}
+        ახალი შვებულების მოთხოვნა
+    {% endif %} 
+    - HR სისტემა
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">
+                        {% if form.instance.pk %}
+                            შვებულების მოთხოვნის რედაქტირება
+                        {% else %}
+                            ახალი შვებულების მოთხოვნა
+                        {% endif %}
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="mb-3">
+                                    {{ form.leave_type.label_tag }}
+                                    {{ form.leave_type }}
+                                    {% if form.leave_type.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ form.leave_type.errors.0 }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    {{ form.start_date.label_tag }}
+                                    {{ form.start_date }}
+                                    {% if form.start_date.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ form.start_date.errors.0 }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    {{ form.end_date.label_tag }}
+                                    {{ form.end_date }}
+                                    {% if form.end_date.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ form.end_date.errors.0 }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        {% if user.role.role in 'admin,hr_manager' %}
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="mb-3">
+                                    {{ form.status.label_tag }}
+                                    {{ form.status }}
+                                    {% if form.status.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ form.status.errors.0 }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <div class="text-end">
+                            <a href="{% url 'leave-list' %}" class="btn btn-secondary">გაუქმება</a>
+                            <button type="submit" class="btn btn-primary">
+                                {% if form.instance.pk %}
+                                    შენახვა
+                                {% else %}
+                                    გაგზავნა
+                                {% endif %}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

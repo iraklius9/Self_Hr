@@ -1,0 +1,80 @@
+{% extends 'hr_app/base.html' %}
+{% load static %}
+
+{% block title %}პროფილი - HR სისტემა{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-body text-center">
+                    {% if user.employee_profile.profile_picture %}
+                        <img src="{{ user.employee_profile.profile_picture.url }}" class="profile-picture mb-3">
+                    {% else %}
+                        <img src="{% static 'hr_app/img/default-profile.png' %}" class="profile-picture mb-3">
+                    {% endif %}
+                    <h3>{{ user.get_full_name }}</h3>
+                    <p class="text-muted">{{ user.employee_profile.job_title }}</p>
+                    <hr>
+                    <div class="text-start">
+                        <p><strong>დეპარტამენტი:</strong> {{ user.employee_profile.department.name }}</p>
+                        <p><strong>ელ-ფოსტა:</strong> {{ user.email }}</p>
+                        <p><strong>ტელეფონი:</strong> {{ user.employee_profile.phone }}</p>
+                        <p><strong>მისამართი:</strong> {{ user.employee_profile.address }}</p>
+                        <p><strong>დაწყების თარიღი:</strong> {{ user.employee_profile.start_date|date:"d.m.Y" }}</p>
+                        <p><strong>დარჩენილი შვებულების დღეები:</strong> {{ user.employee_profile.vacation_days_left }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h4 class="mb-0">პროფილის რედაქტირება</h4>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            {{ form.phone.label_tag }}
+                            {{ form.phone }}
+                            {% if form.phone.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.phone.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.address.label_tag }}
+                            {{ form.address }}
+                            {% if form.address.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.address.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.profile_picture.label_tag }}
+                            {{ form.profile_picture }}
+                            {% if form.profile_picture.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.profile_picture.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="text-end">
+                            <button type="submit" class="btn btn-primary">შენახვა</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

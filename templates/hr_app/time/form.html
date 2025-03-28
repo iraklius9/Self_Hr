@@ -1,0 +1,105 @@
+{% extends 'hr_app/base.html' %}
+{% load static %}
+
+{% block title %}
+    {% if form.instance.pk %}
+        დროის ჩანაწერის რედაქტირება
+    {% else %}
+        ახალი დროის ჩანაწერი
+    {% endif %} 
+    - HR სისტემა
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">
+                        {% if form.instance.pk %}
+                            დროის ჩანაწერის რედაქტირება
+                        {% else %}
+                            ახალი დროის ჩანაწერი
+                        {% endif %}
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        {% if user.role.role in 'admin,hr_manager' %}
+                        <div class="mb-3">
+                            {{ form.employee.label_tag }}
+                            {{ form.employee }}
+                            {% if form.employee.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.employee.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    {{ form.date.label_tag }}
+                                    {{ form.date }}
+                                    {% if form.date.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ form.date.errors.0 }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    {{ form.hours_worked.label_tag }}
+                                    {{ form.hours_worked }}
+                                    {% if form.hours_worked.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ form.hours_worked.errors.0 }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    {{ form.overtime.label_tag }}
+                                    {{ form.overtime }}
+                                    {% if form.overtime.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ form.overtime.errors.0 }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.notes.label_tag }}
+                            {{ form.notes }}
+                            {% if form.notes.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.notes.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="text-end">
+                            <a href="{% url 'time-list' %}" class="btn btn-secondary">გაუქმება</a>
+                            <button type="submit" class="btn btn-primary">
+                                {% if form.instance.pk %}
+                                    შენახვა
+                                {% else %}
+                                    დამატება
+                                {% endif %}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

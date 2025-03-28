@@ -1,0 +1,43 @@
+{% extends 'hr_app/base.html' %}
+{% load django_bootstrap5 %}
+{% load i18n %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="text-center">{% trans "სისტემაში შესვლა" %}</h3>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="id_username" class="form-label">{% trans "ელ. ფოსტა" %}</label>
+                            {{ form.username }}
+                        </div>
+                        <div class="mb-3">
+                            <label for="id_password" class="form-label">{% trans "პაროლი" %}</label>
+                            {{ form.password }}
+                        </div>
+                        {% if form.errors %}
+                        <div class="alert alert-danger">
+                            {% trans "არასწორი ელ. ფოსტა ან პაროლი" %}
+                        </div>
+                        {% endif %}
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary">{% trans "შესვლა" %}</button>
+                        </div>
+                        <div class="text-center mt-3">
+                            <a href="{% url 'signup' %}" class="text-decoration-none">
+                                {% trans "არ გაქვთ ანგარიში? დარეგისტრირდით" %}
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

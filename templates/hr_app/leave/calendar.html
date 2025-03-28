@@ -1,0 +1,40 @@
+{% extends "hr_app/base.html" %}
+{% block title %}შვებულებების კალენდარი - HR სისტემა{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@5.10.1/main.min.css">
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h4 class="mb-0">შვებულებების კალენდარი</h4>
+        <a href="{% url 'leave-list' %}" class="btn btn-outline-primary">
+            <i class="bi bi-list"></i> სიის ნახვა
+        </a>
+    </div>
+    <div class="card-body">
+        <div id="calendar"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.10.1/main.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const calendarEl = document.getElementById('calendar');
+        const calendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'dayGridMonth',
+            locale: 'ka',
+            headerToolbar: {
+                left: 'prev,next today',
+                center: 'title',
+                right: 'dayGridMonth,timeGridWeek'
+            },
+            events: {{ leave_events|safe }}
+        });
+        calendar.render();
+    });
+</script>
+{% endblock %} 

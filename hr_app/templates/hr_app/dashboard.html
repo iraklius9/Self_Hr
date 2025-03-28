@@ -1,0 +1,47 @@
+{% extends 'hr_app/base.html' %}
+{% load django_bootstrap5 %}
+
+{% block content %}
+<div class="container mt-4">
+    {% if employee %}
+        {# Show employee dashboard content #}
+        <div class="row">
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>პროფილი</h5>
+                    </div>
+                    <div class="card-body">
+                        <p>სახელი: {{ employee.first_name }}</p>
+                        <p>გვარი: {{ employee.last_name }}</p>
+                        <p>თანამდებობა: {{ employee.job_title }}</p>
+                    </div>
+                </div>
+            </div>
+            <!-- Other dashboard cards -->
+        </div>
+    {% else %}
+        <div class="alert alert-info">
+            <h4>გთხოვთ დაელოდოთ პროფილის აქტივაციას</h4>
+            <p>თქვენი პროფილი განხილვის პროცესშია. HR მენეჯერი მალე დაამტკიცებს მას.</p>
+        </div>
+    {% endif %}
+
+    {% if user.role.role in 'admin,hr_manager' %}
+        {# Show admin/HR manager specific content #}
+        <div class="row mt-4">
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>სტატისტიკა</h5>
+                    </div>
+                    <div class="card-body">
+                        <p>თანამშრომლების რაოდენობა: {{ total_employees }}</p>
+                        <p>განხილვის პროცესში: {{ pending_leaves }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %} 

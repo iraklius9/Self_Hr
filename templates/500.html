@@ -1,0 +1,10 @@
+{% extends "hr_app/base_auth.html" %}
+{% block title %}500 - სერვერის შეცდომა{% endblock %}
+
+{% block content %}
+<div class="text-center">
+    <h1 class="display-1">500</h1>
+    <p class="lead">სერვერის შეცდომა</p>
+    <a href="{% url 'dashboard' %}" class="btn btn-primary">მთავარ გვერდზე დაბრუნება</a>
+</div>
+{% endblock %} 

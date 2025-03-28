@@ -1,0 +1,10 @@
+{% extends "hr_app/base_auth.html" %}
+{% block title %}403 - წვდომა აკრძალულია{% endblock %}
+
+{% block content %}
+<div class="text-center">
+    <h1 class="display-1">403</h1>
+    <p class="lead">თქვენ არ გაქვთ წვდომა ამ გვერდზე</p>
+    <a href="{% url 'dashboard' %}" class="btn btn-primary">მთავარ გვერდზე დაბრუნება</a>
+</div>
+{% endblock %} 

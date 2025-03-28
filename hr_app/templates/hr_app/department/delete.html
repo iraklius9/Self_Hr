@@ -1,0 +1,27 @@
+{% extends 'hr_app/base.html' %}
+{% load django_bootstrap5 %}
+{% load i18n %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h3>{% trans "დეპარტამენტის წაშლა" %}</h3>
+                </div>
+                <div class="card-body">
+                    <p>{% trans "დარწმუნებული ხართ, რომ გსურთ წაშალოთ დეპარტამენტი" %} "{{ object.name }}"?</p>
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-danger">{% trans "წაშლა" %}</button>
+                            <a href="{% url 'department-list' %}" class="btn btn-secondary">{% trans "გაუქმება" %}</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

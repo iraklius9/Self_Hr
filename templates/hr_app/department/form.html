@@ -1,0 +1,67 @@
+{% extends 'hr_app/base.html' %}
+{% load static %}
+
+{% block title %}
+    {% if form.instance.pk %}
+        დეპარტამენტის რედაქტირება
+    {% else %}
+        ახალი დეპარტამენტი
+    {% endif %} 
+    - HR სისტემა
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">
+                        {% if form.instance.pk %}
+                            დეპარტამენტის რედაქტირება
+                        {% else %}
+                            ახალი დეპარტამენტი
+                        {% endif %}
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            {{ form.name.label_tag }}
+                            {{ form.name }}
+                            {% if form.name.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.name.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.description.label_tag }}
+                            {{ form.description }}
+                            {% if form.description.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.description.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="text-end">
+                            <a href="{% url 'department-list' %}" class="btn btn-secondary">გაუქმება</a>
+                            <button type="submit" class="btn btn-primary">
+                                {% if form.instance.pk %}
+                                    შენახვა
+                                {% else %}
+                                    დამატება
+                                {% endif %}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

@@ -1,0 +1,176 @@
+{% extends "hr_app/base.html" %}
+{% load django_bootstrap5 %}
+
+{% block title %}მთავარი გვერდი - HR სისტემა{% endblock %}
+
+{% block content %}
+<!-- IP/Location Status -->
+<div class="alert {% if is_at_workplace %}alert-success{% else %}alert-warning{% endif %} mb-4">
+    {% if is_at_workplace %}
+    <i class="bi bi-check-circle-fill"></i> თქვენ იმყოფებით სამუშაო ადგილზე
+    {% else %}
+    <i class="bi bi-exclamation-triangle-fill"></i> თქვენ არ იმყოფებით სამუშაო ადგილზე
+    {% endif %}
+    <small class="d-block text-muted">IP: {{ current_ip }}</small>
+</div>
+
+<!-- Stats Cards for Admin/HR -->
+{% if user.role.role in 'admin,hr_manager' %}
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body">
+                <h6 class="card-subtitle mb-2 text-muted">თანამშრომლები</h6>
+                <h2 class="card-title mb-0">{{ total_employees }}</h2>
+                <div class="mt-2">
+                    <a href="{% url 'employee-list' %}" class="btn btn-sm btn-primary">
+                        <i class="bi bi-people"></i> ნახვა
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body">
+                <h6 class="card-subtitle mb-2 text-muted">აქტიური შვებულებები</h6>
+                <h2 class="card-title mb-0">{{ active_leaves }}</h2>
+                <div class="mt-2">
+                    <a href="{% url 'leave-list' %}" class="btn btn-sm btn-primary">
+                        <i class="bi bi-calendar-check"></i> ნახვა
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body">
+                <h6 class="card-subtitle mb-2 text-muted">სამუშაო ადგილზე</h6>
+                <h2 class="card-title mb-0">{{ employees_present }}</h2>
+                <div class="mt-2">
+                    <a href="#" class="btn btn-sm btn-primary">
+                        <i class="bi bi-geo-alt"></i> ნახვა
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body">
+                <h6 class="card-subtitle mb-2 text-muted">დეპარტამენტები</h6>
+                <h2 class="card-title mb-0">{{ total_departments }}</h2>
+                <div class="mt-2">
+                    <a href="{% url 'department-list' %}" class="btn btn-sm btn-primary">
+                        <i class="bi bi-diagram-3"></i> ნახვა
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Employee's Personal Section -->
+<div class="row">
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">პირადი ინფორმაცია</h5>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-3">
+                    {% if user.employee_profile.profile_picture %}
+                    <img src="{{ user.employee_profile.profile_picture.url }}" alt="Profile" class="profile-picture mb-3">
+                    {% else %}
+                    <div class="profile-picture bg-light d-flex align-items-center justify-content-center mb-3">
+                        <i class="bi bi-person-circle" style="font-size: 5rem;"></i>
+                    </div>
+                    {% endif %}
+                    <h5>{{ user.employee_profile.get_full_name }}</h5>
+                    <p class="text-muted">{{ user.employee_profile.job_title }}</p>
+                </div>
+                <hr>
+                <p><strong>დეპარტამენტი:</strong> {{ user.employee_profile.department.name }}</p>
+                <p><strong>მენეჯერი:</strong> {% if user.employee_profile.manager %}{{ user.employee_profile.manager }}{% else %}არ ჰყავს{% endif %}</p>
+                <p><strong>დარჩენილი შვებულება:</strong> {{ user.employee_profile.vacation_days_left }} დღე</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-8">
+        <!-- Recent Time Entries -->
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">ბოლო დროის ჩანაწერები</h5>
+                <a href="{% url 'time-list' %}" class="btn btn-sm btn-primary">ყველა</a>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>თარიღი</th>
+                                <th>საათები</th>
+                                <th>ზეგანაკვეთური</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for entry in recent_time_entries %}
+                            <tr>
+                                <td>{{ entry.date }}</td>
+                                <td>{{ entry.hours_worked }}</td>
+                                <td>{{ entry.overtime }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="3" class="text-center">ჩანაწერები არ არის</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Leave Requests -->
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">შვებულების მოთხოვნები</h5>
+                <a href="{% url 'leave-create' %}" class="btn btn-sm btn-primary">ახალი მოთხოვნა</a>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>ტიპი</th>
+                                <th>თარიღები</th>
+                                <th>სტატუსი</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for leave in recent_leave_requests %}
+                            <tr>
+                                <td>{{ leave.get_leave_type_display }}</td>
+                                <td>{{ leave.start_date }} - {{ leave.end_date }}</td>
+                                <td>
+                                    <span class="badge bg-{{ leave.status }}">
+                                        {{ leave.get_status_display }}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="3" class="text-center">მოთხოვნები არ არის</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

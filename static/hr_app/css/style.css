@@ -1,0 +1,38 @@
+/* Profile picture styling */
+.profile-picture {
+    width: 150px;
+    height: 150px;
+    object-fit: cover;
+    border-radius: 50%;
+}
+
+/* Status badge colors */
+.bg-pending {
+    background-color: #ffc107;
+}
+
+.bg-approved {
+    background-color: #198754;
+}
+
+.bg-rejected {
+    background-color: #dc3545;
+}
+
+/* Sidebar styling */
+.sidebar {
+    background-color: #2c3e50;
+    min-height: 100vh;
+}
+
+.nav-link {
+    color: rgba(255,255,255,.8);
+}
+
+.nav-link:hover {
+    color: #fff;
+}
+
+.nav-link.active {
+    background-color: rgba(255,255,255,.1);
+} 

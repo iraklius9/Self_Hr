@@ -1,0 +1,117 @@
+{% extends 'hr_app/base.html' %}
+{% load static %}
+
+{% block title %}{{ employee.get_full_name }} - HR სისტემა{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body text-center">
+                    {% if employee.profile_picture %}
+                        <img src="{{ employee.profile_picture.url }}" class="profile-picture mb-3">
+                    {% else %}
+                        <img src="{% static 'hr_app/img/default-profile.png' %}" class="profile-picture mb-3">
+                    {% endif %}
+                    <h3>{{ employee.get_full_name }}</h3>
+                    <p class="text-muted">{{ employee.job_title }}</p>
+                    <hr>
+                    <div class="text-start">
+                        <p><strong>დეპარტამენტი:</strong> {{ employee.department.name }}</p>
+                        <p><strong>ელ-ფოსტა:</strong> {{ employee.email }}</p>
+                        <p><strong>ტელეფონი:</strong> {{ employee.phone }}</p>
+                        <p><strong>მისამართი:</strong> {{ employee.address }}</p>
+                        <p><strong>დაწყების თარიღი:</strong> {{ employee.start_date|date:"d.m.Y" }}</p>
+                        <p><strong>დარჩენილი შვებულების დღეები:</strong> {{ employee.vacation_days_left }}</p>
+                    </div>
+                    {% if user.role.role in 'admin,hr_manager' %}
+                    <a href="{% url 'employee-update' employee.pk %}" class="btn btn-warning">
+                        <i class="bi bi-pencil"></i> რედაქტირება
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-8">
+            <!-- Leave Requests -->
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">შვებულების მოთხოვნები</h5>
+                    <a href="{% url 'leave-create' %}" class="btn btn-primary btn-sm">
+                        <i class="bi bi-plus-lg"></i> ახალი მოთხოვნა
+                    </a>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>ტიპი</th>
+                                    <th>დაწყება</th>
+                                    <th>დასრულება</th>
+                                    <th>სტატუსი</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for leave in employee.leaverequest_set.all|slice:":5" %}
+                                <tr>
+                                    <td>{{ leave.get_leave_type_display }}</td>
+                                    <td>{{ leave.start_date|date:"d.m.Y" }}</td>
+                                    <td>{{ leave.end_date|date:"d.m.Y" }}</td>
+                                    <td>
+                                        <span class="badge bg-{{ leave.get_status_color }}">
+                                            {{ leave.get_status_display }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center">შვებულების მოთხოვნები არ არის</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Time Entries -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">დროის აღრიცხვა</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>თარიღი</th>
+                                    <th>საათები</th>
+                                    <th>ზეგანაკვეთური</th>
+                                    <th>შენიშვნა</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for entry in employee.timeentry_set.all|slice:":5" %}
+                                <tr>
+                                    <td>{{ entry.date|date:"d.m.Y" }}</td>
+                                    <td>{{ entry.hours_worked }}</td>
+                                    <td>{{ entry.overtime }}</td>
+                                    <td>{{ entry.notes|truncatechars:30 }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center">დროის ჩანაწერები არ არის</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

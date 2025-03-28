@@ -1,0 +1,69 @@
+{% extends 'hr_app/base.html' %}
+{% load django_bootstrap5 %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <!-- Statistics Cards -->
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">თანამშრომლები</h5>
+                    <h2>{{ total_employees }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">განხილვის პროცესში</h5>
+                    <h2>{{ pending_leaves }}</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Leave Requests -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>ბოლო მოთხოვნები</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>თანამშრომელი</th>
+                                <th>ტიპი</th>
+                                <th>თარიღები</th>
+                                <th>სტატუსი</th>
+                                <th>მოქმედება</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for leave in recent_leaves %}
+                            <tr>
+                                <td>{{ leave.employee.get_full_name }}</td>
+                                <td>{{ leave.get_leave_type_display }}</td>
+                                <td>{{ leave.start_date }} - {{ leave.end_date }}</td>
+                                <td>{{ leave.get_status_display }}</td>
+                                <td>
+                                    {% if leave.status == 'pending' %}
+                                    <form method="post" action="{% url 'leave-update-status' leave.id %}" class="d-inline">
+                                        {% csrf_token %}
+                                        <button type="submit" name="action" value="approve" class="btn btn-sm btn-success">დამტკიცება</button>
+                                        <button type="submit" name="action" value="reject" class="btn btn-sm btn-danger">უარყოფა</button>
+                                    </form>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

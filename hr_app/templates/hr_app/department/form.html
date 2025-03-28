@@ -1,0 +1,27 @@
+{% extends 'hr_app/base.html' %}
+{% load django_bootstrap5 %}
+{% load i18n %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h3>{% if form.instance.pk %}{% trans "დეპარტამენტის რედაქტირება" %}{% else %}{% trans "ახალი დეპარტამენტი" %}{% endif %}</h3>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        {% bootstrap_form form %}
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">{% trans "შენახვა" %}</button>
+                            <a href="{% url 'department-list' %}" class="btn btn-secondary">{% trans "გაუქმება" %}</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

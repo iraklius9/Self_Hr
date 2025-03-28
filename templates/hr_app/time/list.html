@@ -1,0 +1,87 @@
+{% extends 'hr_app/base.html' %}
+{% load static %}
+
+{% block title %}დროის აღრიცხვა - HR სისტემა{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>დროის აღრიცხვა</h2>
+        {% if user.role.role in 'admin,hr_manager' %}
+        <div>
+            <a href="{% url 'time-create' %}" class="btn btn-primary me-2">
+                <i class="bi bi-plus-lg"></i> ახალი ჩანაწერი
+            </a>
+            <a href="{% url 'time-export' %}" class="btn btn-success">
+                <i class="bi bi-download"></i> ექსპორტი
+            </a>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>თანამშრომელი</th>
+                            <th>თარიღი</th>
+                            <th>საათები</th>
+                            <th>ზეგანაკვეთური</th>
+                            <th>შენიშვნა</th>
+                            <th>მოქმედება</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for entry in time_entries %}
+                        <tr>
+                            <td>{{ entry.employee.get_full_name }}</td>
+                            <td>{{ entry.date|date:"d.m.Y" }}</td>
+                            <td>{{ entry.hours_worked }}</td>
+                            <td>{{ entry.overtime }}</td>
+                            <td>{{ entry.notes|truncatechars:30 }}</td>
+                            <td>
+                                {% if user.role.role in 'admin,hr_manager' %}
+                                <a href="{% url 'time-update' entry.pk %}" class="btn btn-sm btn-warning">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center">დროის ჩანაწერები არ არის</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            {% if is_paginated %}
+            <nav class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}">წინა</a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for num in page_obj.paginator.page_range %}
+                    <li class="page-item {% if page_obj.number == num %}active{% endif %}">
+                        <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                    </li>
+                    {% endfor %}
+                    
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}">შემდეგი</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %} 

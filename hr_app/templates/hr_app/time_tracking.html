@@ -1,0 +1,293 @@
+{% extends 'hr_app/base.html' %}
+{% load django_bootstrap5 %}
+{% load i18n %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-{% if is_admin %}12{% else %}8{% endif %}">
+            {% bootstrap_messages %}
+            
+            <!-- Personal time tracking card -->
+            <div class="card">
+                <div class="card-header">
+                    <h3>{% trans "სამუშაო დროის აღრიცხვა" %}</h3>
+                </div>
+                <div class="card-body">
+                    {% if not is_in_office %}
+                        <div class="alert alert-warning">
+                            {% trans "თქვენ არ იმყოფებით ოფისში" %}
+                            <br>
+                            {% trans "თქვენი IP მისამართი:" %} {{ client_ip }}
+                        </div>
+                    {% else %}
+                        {% if not current_log %}
+                            <form method="post">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="check_in">
+                                <button type="submit" class="btn btn-primary btn-lg w-100">
+                                    {% trans "სამუშაოს დაწყება" %}
+                                </button>
+                            </form>
+                        {% else %}
+                            <div class="text-center mb-4">
+                                <h4 class="text-success">{% trans "სამუშაო დაწყებულია" %}</h4>
+                                <p>{% trans "დაწყების დრო:" %} {{ current_log.check_in|time:"H:i" }}</p>
+                            </div>
+                            <form method="post">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="check_out">
+                                <button type="submit" class="btn btn-danger btn-lg w-100">
+                                    {% trans "სამუშაოს დასრულება" %}
+                                </button>
+                            </form>
+                        {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Personal time logs -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h4>{% trans "ჩემი დღევანდელი სტატისტიკა" %}</h4>
+                </div>
+                <div class="card-body">
+                    {% if today_logs %}
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>{% trans "დაწყება" %}</th>
+                                        <th>{% trans "დასრულება" %}</th>
+                                        <th>{% trans "ხანგრძლივობა" %}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for log in today_logs %}
+                                    <tr>
+                                        <td>{{ log.check_in|time:"H:i" }}</td>
+                                        <td>
+                                            {% if log.check_out %}
+                                                {{ log.check_out|time:"H:i" }}
+                                            {% else %}
+                                                <span class="text-primary">{% trans "მიმდინარე" %}</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if log.check_out %}
+                                                {{ log.get_duration }}
+                                            {% else %}
+                                                <span class="text-primary">{% trans "მიმდინარე" %}</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-center">{% trans "დღეს ჯერ არ დაგიწყიათ მუშაობა" %}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Add this after the today's logs card -->
+            <div class="card mt-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h4>{% trans "ისტორია" %}</h4>
+                    <div class="btn-group">
+                        <a href="?days=7" class="btn btn-outline-primary {% if selected_days == 7 %}active{% endif %}">7 {% trans "დღე" %}</a>
+                        <a href="?days=30" class="btn btn-outline-primary {% if selected_days == 30 %}active{% endif %}">30 {% trans "დღე" %}</a>
+                        <a href="?days=90" class="btn btn-outline-primary {% if selected_days == 90 %}active{% endif %}">90 {% trans "დღე" %}</a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% if historical_logs %}
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>{% trans "თარიღი" %}</th>
+                                        <th>{% trans "დაწყება" %}</th>
+                                        <th>{% trans "დასრულება" %}</th>
+                                        <th>{% trans "ხანგრძლივობა" %}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for log in historical_logs %}
+                                    <tr>
+                                        <td>{{ log.date|date:"d/m/Y" }}</td>
+                                        <td>{{ log.check_in|time:"H:i" }}</td>
+                                        <td>
+                                            {% if log.check_out %}
+                                                {{ log.check_out|time:"H:i" }}
+                                            {% else %}
+                                                <span class="text-primary">{% trans "მიმდინარე" %}</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if log.check_out %}
+                                                {{ log.get_duration }}
+                                            {% else %}
+                                                <span class="text-primary">{% trans "მიმდინარე" %}</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-center">{% trans "ისტორიული მონაცემები არ მოიძებნა" %}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if is_admin %}
+            <!-- All employees' time logs -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h4>{% trans "ყველა თანამშრომლის დღევანდელი სტატისტიკა" %}</h4>
+                </div>
+                <div class="card-body">
+                    {% if employees_logs %}
+                        <div class="accordion" id="employeesAccordion">
+                            {% for employee, logs in employees_logs.items %}
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="heading{{ employee.id }}">
+                                    <button class="accordion-button {% if not forloop.first %}collapsed{% endif %}" type="button" 
+                                            data-bs-toggle="collapse" data-bs-target="#collapse{{ employee.id }}" 
+                                            aria-expanded="{% if forloop.first %}true{% else %}false{% endif %}" 
+                                            aria-controls="collapse{{ employee.id }}">
+                                        <strong>{{ employee.get_full_name }}</strong>
+                                        {% with active_log=logs|first %}
+                                            {% if not active_log.check_out %}
+                                                <span class="badge bg-success ms-2">{% trans "აქტიური" %}</span>
+                                            {% endif %}
+                                        {% endwith %}
+                                    </button>
+                                </h2>
+                                <div id="collapse{{ employee.id }}" 
+                                     class="accordion-collapse collapse {% if forloop.first %}show{% endif %}" 
+                                     aria-labelledby="heading{{ employee.id }}" 
+                                     data-bs-parent="#employeesAccordion">
+                                    <div class="accordion-body">
+                                        <div class="table-responsive">
+                                            <table class="table table-sm">
+                                                <thead>
+                                                    <tr>
+                                                        <th>{% trans "თანამშრომელი" %}</th>
+                                                        <th>{% trans "დაწყება" %}</th>
+                                                        <th>{% trans "დასრულება" %}</th>
+                                                        <th>{% trans "ხანგრძლივობა" %}</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {% for log in logs %}
+                                                    <tr>
+                                                        <td><strong>{{ employee.first_name }} {{ employee.last_name }}</strong></td>
+                                                        <td>{{ log.check_in|time:"H:i" }}</td>
+                                                        <td>
+                                                            {% if log.check_out %}
+                                                                {{ log.check_out|time:"H:i" }}
+                                                            {% else %}
+                                                                <span class="text-primary">{% trans "მიმდინარე" %}</span>
+                                                            {% endif %}
+                                                        </td>
+                                                        <td>
+                                                            {% if log.check_out %}
+                                                                {{ log.get_duration }}
+                                                            {% else %}
+                                                                <span class="text-primary">{% trans "მიმდინარე" %}</span>
+                                                            {% endif %}
+                                                        </td>
+                                                    </tr>
+                                                    {% endfor %}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-center">{% trans "დღეს არცერთ თანამშრომელს არ დაუწყია მუშაობა" %}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Add this inside the admin section, after today's all employees logs -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h4>{% trans "თანამშრომლების ისტორია" %}</h4>
+                </div>
+                <div class="card-body">
+                    {% if employees_historical %}
+                        <div class="accordion" id="employeesHistoricalAccordion">
+                            {% for employee, dates in employees_historical.items %}
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="headingHist{{ employee.id }}">
+                                    <button class="accordion-button collapsed" type="button" 
+                                            data-bs-toggle="collapse" data-bs-target="#collapseHist{{ employee.id }}" 
+                                            aria-expanded="false" 
+                                            aria-controls="collapseHist{{ employee.id }}">
+                                        <strong>{{ employee.get_full_name }}</strong>
+                                    </button>
+                                </h2>
+                                <div id="collapseHist{{ employee.id }}" 
+                                     class="accordion-collapse collapse" 
+                                     aria-labelledby="headingHist{{ employee.id }}" 
+                                     data-bs-parent="#employeesHistoricalAccordion">
+                                    <div class="accordion-body">
+                                        <div class="table-responsive">
+                                            <table class="table table-sm">
+                                                <thead>
+                                                    <tr>
+                                                        <th>{% trans "თარიღი" %}</th>
+                                                        <th>{% trans "დაწყება" %}</th>
+                                                        <th>{% trans "დასრულება" %}</th>
+                                                        <th>{% trans "ხანგრძლივობა" %}</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {% for date, logs in dates.items %}
+                                                        {% for log in logs %}
+                                                        <tr>
+                                                            <td>{{ date|date:"d/m/Y" }}</td>
+                                                            <td>{{ log.check_in|time:"H:i" }}</td>
+                                                            <td>
+                                                                {% if log.check_out %}
+                                                                    {{ log.check_out|time:"H:i" }}
+                                                                {% else %}
+                                                                    <span class="text-primary">{% trans "მიმდინარე" %}</span>
+                                                                {% endif %}
+                                                            </td>
+                                                            <td>
+                                                                {% if log.check_out %}
+                                                                    {{ log.get_duration }}
+                                                                {% else %}
+                                                                    <span class="text-primary">{% trans "მიმდინარე" %}</span>
+                                                                {% endif %}
+                                                            </td>
+                                                        </tr>
+                                                        {% endfor %}
+                                                    {% endfor %}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-center">{% trans "ისტორიული მონაცემები არ მოიძებნა" %}</p>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %} 

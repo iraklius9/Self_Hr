@@ -1,0 +1,23 @@
+{% load static %}
+{% load django_bootstrap5 %}
+<!DOCTYPE html>
+<html lang="ka">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}HR სისტემა{% endblock %}</title>
+    {% bootstrap_css %}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="{% static 'hr_app/css/style.css' %}">
+</head>
+<body class="bg-light">
+    <div class="container py-5">
+        <div class="text-center mb-4">
+            <h1>HR სისტემა</h1>
+        </div>
+        {% bootstrap_messages %}
+        {% block content %}{% endblock %}
+    </div>
+    {% bootstrap_javascript %}
+</body>
+</html> 

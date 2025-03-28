@@ -1,0 +1,124 @@
+/* Sidebar Styles */
+.wrapper {
+    display: flex;
+    width: 100%;
+}
+
+#sidebar {
+    width: 250px;
+    min-height: 100vh;
+    transition: all 0.3s;
+}
+
+#sidebar.active {
+    margin-left: -250px;
+}
+
+#sidebar .sidebar-header {
+    padding: 20px;
+    background: #343a40;
+}
+
+#sidebar ul.components {
+    padding: 20px 0;
+}
+
+#sidebar ul li a {
+    padding: 10px 20px;
+    display: block;
+    color: #fff;
+    text-decoration: none;
+}
+
+#sidebar ul li a:hover,
+#sidebar ul li.active > a {
+    background: #495057;
+}
+
+#sidebar ul li a i {
+    margin-right: 10px;
+}
+
+/* Content Styles */
+#content {
+    width: calc(100% - 250px);
+    min-height: 100vh;
+    transition: all 0.3s;
+}
+
+#content.active {
+    width: 100%;
+}
+
+/* Card Styles */
+.card {
+    border-radius: 10px;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.card-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+}
+
+/* Button Styles */
+.btn-primary {
+    background-color: #212529;
+    border-color: #212529;
+}
+
+.btn-primary:hover {
+    background-color: #343a40;
+    border-color: #343a40;
+}
+
+/* Table Styles */
+.table th {
+    background-color: #f8f9fa;
+}
+
+/* Form Styles */
+.form-control:focus {
+    border-color: #343a40;
+    box-shadow: 0 0 0 0.2rem rgba(52, 58, 64, 0.25);
+}
+
+/* Status Badge Styles */
+.badge.bg-pending {
+    background-color: #ffc107;
+}
+
+.badge.bg-approved {
+    background-color: #198754;
+}
+
+.badge.bg-rejected {
+    background-color: #dc3545;
+}
+
+/* Profile Picture Styles */
+.profile-picture {
+    width: 150px;
+    height: 150px;
+    object-fit: cover;
+    border-radius: 50%;
+}
+
+/* Responsive Styles */
+@media (max-width: 768px) {
+    #sidebar {
+        margin-left: -250px;
+    }
+    
+    #sidebar.active {
+        margin-left: 0;
+    }
+    
+    #content {
+        width: 100%;
+    }
+    
+    #content.active {
+        width: calc(100% - 250px);
+    }
+} 

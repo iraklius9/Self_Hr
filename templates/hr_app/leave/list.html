@@ -1,0 +1,89 @@
+{% extends 'hr_app/base.html' %}
+{% load static %}
+
+{% block title %}შვებულებები - HR სისტემა{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>შვებულებები</h2>
+        <a href="{% url 'leave-create' %}" class="btn btn-primary">
+            <i class="bi bi-plus-lg"></i> ახალი მოთხოვნა
+        </a>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>თანამშრომელი</th>
+                            <th>ტიპი</th>
+                            <th>დაწყება</th>
+                            <th>დასრულება</th>
+                            <th>დღეები</th>
+                            <th>სტატუსი</th>
+                            <th>მოქმედება</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for leave in leave_list %}
+                        <tr>
+                            <td>{{ leave.employee.get_full_name }}</td>
+                            <td>{{ leave.get_leave_type_display }}</td>
+                            <td>{{ leave.start_date|date:"d.m.Y" }}</td>
+                            <td>{{ leave.end_date|date:"d.m.Y" }}</td>
+                            <td>{{ leave.days }}</td>
+                            <td>
+                                <span class="badge bg-{{ leave.get_status_color }}">
+                                    {{ leave.get_status_display }}
+                                </span>
+                            </td>
+                            <td>
+                                <a href="{% url 'leave-detail' leave.pk %}" class="btn btn-sm btn-info">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                {% if user.role.role in 'admin,hr_manager' or leave.status == 'pending' %}
+                                <a href="{% url 'leave-update' leave.pk %}" class="btn btn-sm btn-warning">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center">შვებულების მოთხოვნები არ არის</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            {% if is_paginated %}
+            <nav class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}">წინა</a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for num in page_obj.paginator.page_range %}
+                    <li class="page-item {% if page_obj.number == num %}active{% endif %}">
+                        <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                    </li>
+                    {% endfor %}
+                    
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}">შემდეგი</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %} 

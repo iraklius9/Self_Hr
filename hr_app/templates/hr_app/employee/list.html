@@ -1,0 +1,77 @@
+{% extends 'hr_app/base.html' %}
+{% load django_bootstrap5 %}
+{% load i18n %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>თანამშრომლები</h2>
+        <a href="{% url 'employee-create' %}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> დამატება
+        </a>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <form method="get" class="mb-4">
+                <div class="input-group">
+                    <input type="text" name="search" class="form-control" placeholder="ძიება..." value="{{ request.GET.search }}">
+                    <button type="submit" class="btn btn-outline-secondary">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
+            </form>
+
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>სახელი</th>
+                            <th>გვარი</th>
+                            <th>თანამდებობა</th>
+                            <th>დეპარტამენტი</th>
+                            <th>მოქმედება</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for employee in employees %}
+                        <tr>
+                            <td>{{ employee.first_name }}</td>
+                            <td>{{ employee.last_name }}</td>
+                            <td>{{ employee.job_title }}</td>
+                            <td>{{ employee.department.name }}</td>
+                            <td>
+                                {% if user.role.role in 'admin,hr_manager' %}
+                                <div class="btn-group">
+                                    <!-- Blue button - View details -->
+                                    <a href="{% url 'employee-detail' pk=employee.pk %}" class="btn btn-sm btn-primary" title="{% trans 'დეტალები' %}">
+                                        <i class="fas fa-eye"></i> {% trans "ნახვა" %}
+                                    </a>
+                                    
+                                    <!-- Yellow/Orange button - Edit -->
+                                    <a href="{% url 'employee-update' pk=employee.pk %}" class="btn btn-sm btn-warning" title="{% trans 'რედაქტირება' %}">
+                                        <i class="fas fa-edit"></i> {% trans "რედაქტირება" %}
+                                    </a>
+                                    
+                                    <!-- Red button - Delete -->
+                                    <a href="{% url 'employee-delete' pk=employee.pk %}" class="btn btn-sm btn-danger" title="{% trans 'წაშლა' %}">
+                                        <i class="fas fa-trash"></i> {% trans "წაშლა" %}
+                                    </a>
+                                </div>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center">თანამშრომლები არ მოიძებნა</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            {% bootstrap_pagination page_obj %}
+        </div>
+    </div>
+</div>
+{% endblock %} 

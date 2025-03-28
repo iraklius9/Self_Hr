@@ -1,0 +1,83 @@
+{% extends 'hr_app/base.html' %}
+{% load static %}
+
+{% block title %}მთავარი გვერდი - HR სისტემა{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    {% if user.is_employee %}
+    <!-- Employee Dashboard -->
+    <div class="row">
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5>ჩემი პროფილი</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        {% if user.employee_profile.profile_picture %}
+                            <img src="{{ user.employee_profile.profile_picture.url }}" class="profile-picture me-3">
+                        {% else %}
+                            <img src="{% static 'hr_app/img/default-profile.png' %}" class="profile-picture me-3">
+                        {% endif %}
+                        <div>
+                            <h4>{{ user.employee_profile.get_full_name }}</h4>
+                            <p class="text-muted mb-0">{{ user.employee_profile.job_title }}</p>
+                            <p class="text-muted mb-0">{{ user.employee_profile.department.name }}</p>
+                        </div>
+                    </div>
+                    <hr>
+                    <p><strong>დარჩენილი შვებულების დღეები:</strong> {{ user.employee_profile.vacation_days_left }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5>ბოლო შვებულების მოთხოვნები</h5>
+                </div>
+                <div class="card-body">
+                    {% if leave_requests %}
+                    <div class="list-group">
+                        {% for leave in leave_requests %}
+                        <div class="list-group-item">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">{{ leave.get_leave_type_display }}</h6>
+                                <small class="badge bg-{{ leave.get_status_color }}">
+                                    {{ leave.get_status_display }}
+                                </small>
+                            </div>
+                            <p class="mb-1">{{ leave.start_date|date:"d.m.Y" }} - {{ leave.end_date|date:"d.m.Y" }}</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted">შვებულების მოთხოვნები არ არის</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <!-- Admin/HR Dashboard -->
+    <div class="row">
+        <div class="col-md-3 mb-4">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <h5>თანამშრომლები</h5>
+                    <h2>{{ total_employees }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-4">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <h5>მოთხოვნები</h5>
+                    <h2>{{ pending_leaves }}</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %} 

@@ -1,0 +1,114 @@
+{% extends 'hr_app/base.html' %}
+{% load static %}
+
+{% block title %}თანამშრომლები - HR სისტემა{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>თანამშრომლები</h2>
+        {% if user.role.role in 'admin,hr_manager' %}
+        <a href="{% url 'employee-create' %}" class="btn btn-primary">
+            <i class="bi bi-plus-lg"></i> ახალი თანამშრომელი
+        </a>
+        {% endif %}
+    </div>
+
+    <!-- Search Form -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-4">
+                    {{ search_form.search }}
+                </div>
+                <div class="col-md-4">
+                    {{ search_form.department }}
+                </div>
+                <div class="col-md-4">
+                    <button type="submit" class="btn btn-primary">ძებნა</button>
+                    <a href="{% url 'employee-list' %}" class="btn btn-secondary">გასუფთავება</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Employee List -->
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>სახელი გვარი</th>
+                            <th>თანამდებობა</th>
+                            <th>დეპარტამენტი</th>
+                            <th>ელ-ფოსტა</th>
+                            <th>დაწყების თარიღი</th>
+                            <th>მოქმედება</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for employee in employee_list %}
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    {% if employee.profile_picture %}
+                                        <img src="{{ employee.profile_picture.url }}" class="rounded-circle me-2" width="40" height="40">
+                                    {% else %}
+                                        <img src="{% static 'hr_app/img/default-profile.png' %}" class="rounded-circle me-2" width="40" height="40">
+                                    {% endif %}
+                                    {{ employee.get_full_name }}
+                                </div>
+                            </td>
+                            <td>{{ employee.job_title }}</td>
+                            <td>{{ employee.department.name }}</td>
+                            <td>{{ employee.email }}</td>
+                            <td>{{ employee.start_date|date:"d.m.Y" }}</td>
+                            <td>
+                                <a href="{% url 'employee-detail' employee.pk %}" class="btn btn-sm btn-info">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                {% if user.role.role in 'admin,hr_manager' %}
+                                <a href="{% url 'employee-update' employee.pk %}" class="btn btn-sm btn-warning">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center">თანამშრომლები არ მოიძებნა</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Pagination -->
+            {% if is_paginated %}
+            <nav class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}">წინა</a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for num in page_obj.paginator.page_range %}
+                    <li class="page-item {% if page_obj.number == num %}active{% endif %}">
+                        <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                    </li>
+                    {% endfor %}
+                    
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}">შემდეგი</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %} 
