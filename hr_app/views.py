@@ -1,15 +1,15 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
-from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView, TemplateView, View
+from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView, TemplateView, View, FormView
 from django.urls import reverse_lazy, reverse
 from django.contrib import messages
 from django.utils.translation import gettext_lazy as _
-from django.db.models import Q
+from django.db.models import Q, Count, Avg
 from django.contrib.auth.models import User
 from django.utils import timezone
 from django.conf import settings
-from django.http import JsonResponse, HttpResponse
+from django.http import JsonResponse, HttpResponse, HttpResponseRedirect
 import math
 import requests
 import ipaddress
@@ -17,21 +17,22 @@ import csv
 from django.core.mail import send_mail
 import random
 import string
-from django.contrib.auth import login, logout
+from django.contrib.auth import login, logout, get_user_model
 from django.core.exceptions import ValidationError
 from datetime import timedelta
-from django.db.models import Sum
+from django.db.models import Sum, F
 from django.db.models.functions import TruncDate
 
 from .models import (
     Employee, Department, TimeEntry, LeaveRequest, 
-    News, Notification, Role, LocationLog, TimeLog
+    News, Notification, Role, LocationLog, TimeLog,
+    PerformanceReview, PerformanceGoal
 )
 from .forms import (
     EmployeeForm, EmployeeUpdateForm, DepartmentForm, TimeEntryForm,
     LeaveRequestForm, LeaveRequestUpdateForm, NewsForm, RoleForm,
     EmployeeSearchForm, CustomAuthenticationForm,
-    UserSignupForm
+    UserSignupForm, PerformanceReviewForm, SignupForm
 )
 
 # Authentication Views
@@ -45,18 +46,32 @@ class CustomLoginView(LoginView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        # Ensure password reset URL is not in context
+        # Remove password reset URL from context
         if 'password_reset_url' in context:
             del context['password_reset_url']
         return context
 
+    def dispatch(self, request, *args, **kwargs):
+        if self.redirect_authenticated_user and self.request.user.is_authenticated:
+            redirect_to = self.get_success_url()
+            if redirect_to == self.request.path:
+                raise ValueError(
+                    "Redirection loop for authenticated user detected. Check that "
+                    "your LOGIN_REDIRECT_URL doesn't point to a login page."
+                )
+            return HttpResponseRedirect(redirect_to)
+        return super().dispatch(request, *args, **kwargs)
+
 class CustomLogoutView(LogoutView):
-    next_page = reverse_lazy('login')
-    http_method_names = ['get', 'post']  # Allow both GET and POST methods
+    next_page = 'login'
     
-    def get(self, request, *args, **kwargs):
-        logout(request)
-        messages.info(request, _("წარმატებით გამოხვედით სისტემიდან!"))
+    def dispatch(self, request, *args, **kwargs):
+        response = super().dispatch(request, *args, **kwargs)
+        # Clear any existing sessions
+        request.session.flush()
+        # Clear any existing cookies
+        response.delete_cookie('sessionid')
+        messages.success(request, _("წარმატებით გამოხვედით სისტემიდან!"))
         return redirect('login')
 
 # Dashboard View
@@ -92,7 +107,7 @@ class EmployeeListView(LoginRequiredMixin, UserPassesTestMixin, ListView):
     paginate_by = 10
     
     def test_func(self):
-        return self.request.user.role.role in ['admin', 'hr_manager']
+        return hasattr(self.request.user, 'role') and self.request.user.role.role in ['admin', 'hr_manager']
     
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -101,13 +116,14 @@ class EmployeeListView(LoginRequiredMixin, UserPassesTestMixin, ListView):
             queryset = queryset.filter(
                 Q(first_name__icontains=search_query) |
                 Q(last_name__icontains=search_query) |
-                Q(email__icontains=search_query)
+                Q(department__name__icontains=search_query)
             )
-        return queryset
+        return queryset.order_by('first_name', 'last_name')
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['search_form'] = EmployeeSearchForm(self.request.GET)
+        context['page_obj'] = context['employees']
         return context
 
 class EmployeeDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
@@ -120,17 +136,76 @@ class EmployeeDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
                 self.request.user.role.role in ['admin', 'hr_manager']) or \
                self.request.user == employee.user
 
-class EmployeeCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
+class EmployeeCreateView(LoginRequiredMixin, CreateView):
     model = Employee
-    template_name = 'hr_app/employee/form.html'
-    fields = ['first_name', 'last_name', 'email', 'phone', 'department', 'job_title', 'start_date']
+    form_class = EmployeeForm
+    template_name = 'hr_app/employee/create.html'
     success_url = reverse_lazy('employee-list')
     
-    def test_func(self):
-        return self.request.user.role.role in ['admin', 'hr_manager']
-    
     def form_valid(self, form):
-        messages.success(self.request, "თანამშრომელი წარმატებით დაემატა")
+        employee = form.save(commit=False)
+        
+        # Create a User for this Employee
+        password = self.request.POST.get('password')
+        if not password:
+            password = 'default_password'  # Set a default if no password provided
+            
+        # Generate username from email
+        username = employee.email.split('@')[0]
+        base_username = username
+        counter = 1
+        
+        # Ensure username is unique
+        User = get_user_model()
+        while User.objects.filter(username=username).exists():
+            username = f"{base_username}{counter}"
+            counter += 1
+            
+        # Check if a user with this email already exists
+        try:
+            # Use filter and first() instead of get() to avoid MultipleObjectsReturned
+            existing_user = User.objects.filter(email=employee.email).first()
+            
+            if existing_user:
+                # If user exists, use it instead of creating a new one
+                user = existing_user
+                # Update user info in case it changed
+                user.first_name = employee.first_name
+                user.last_name = employee.last_name
+                # Only update password if it was provided
+                if password != 'default_password':
+                    user.set_password(password)
+                user.save()
+            else:
+                # No existing user found, create a new one
+                user = User.objects.create_user(
+                    username=username,
+                    email=employee.email,
+                    password=password,
+                    first_name=employee.first_name,
+                    last_name=employee.last_name
+                )
+            
+            # Create default role only if the user doesn't already have one
+            if not hasattr(user, 'role') or not user.role:
+                Role.objects.create(
+                    user=user,
+                    role='employee'
+                )
+            
+            # Associate user with employee
+            employee.user = user
+            
+            # Save the employee
+            employee.save()
+            
+        except Exception as e:
+            # Log the error and show a message
+            print(f"Error creating user: {str(e)}")
+            messages.error(self.request, _("შეცდომა მომხმარებლის შექმნისას: {str(e)}"))
+            return self.form_invalid(form)
+        
+        messages.success(self.request, _("თანამშრომელი წარმატებით დაემატა"))
         return super().form_valid(form)
 
 class EmployeeUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
@@ -165,52 +240,90 @@ class EmployeeDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
 # Leave Request Views
 class LeaveRequestListView(LoginRequiredMixin, ListView):
     model = LeaveRequest
-    template_name = 'hr_app/leave_request/list.html'
+    template_name = 'hr_app/leave/list.html'
     context_object_name = 'leave_requests'
     paginate_by = 10
-
+    
     def get_queryset(self):
-        if self.request.user.role.role in ['admin', 'hr_manager']:
-            # Admins and HR managers see all requests
-            return LeaveRequest.objects.all().order_by('-created_at')
-        # Regular employees see only their requests
-        return LeaveRequest.objects.filter(employee=self.request.user.employee_profile).order_by('-created_at')
-
+        queryset = super().get_queryset()
+        
+        # Filter by user role
+        if hasattr(self.request.user, 'role') and self.request.user.role.role in ['admin', 'hr_manager']:
+            # Admin sees all leave requests
+            queryset = LeaveRequest.objects.all().select_related('employee')
+        else:
+            # Regular users see only their own leave requests
+            try:
+                employee = self.request.user.employee_profile
+                queryset = LeaveRequest.objects.filter(employee=employee)
+            except (Employee.DoesNotExist, AttributeError):
+                queryset = LeaveRequest.objects.none()
+        
+        # Apply status filter if provided
+        status = self.request.GET.get('status')
+        if status:
+            queryset = queryset.filter(status=status)
+        
+        # Order by submission date, newest first
+        return queryset.order_by('-submitted_at')
+    
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['is_admin'] = self.request.user.role.role in ['admin', 'hr_manager']
+        
+        # Add employee to context for checking permissions
+        try:
+            context['employee'] = self.request.user.employee_profile
+        except (Employee.DoesNotExist, AttributeError):
+            context['employee'] = None
+        
+        # Include active leaves count only for admin/HR managers
+        if hasattr(self.request.user, 'role') and self.request.user.role.role in ['admin', 'hr_manager']:
+            today = timezone.now().date()
+            active_leaves = LeaveRequest.objects.filter(
+                status='approved',
+                start_date__lte=today,
+                end_date__gte=today
+            ).count()
+            context['active_leaves'] = active_leaves
+        
         return context
 
 class LeaveRequestCreateView(LoginRequiredMixin, CreateView):
     model = LeaveRequest
-    template_name = 'hr_app/leave_request/form.html'
     form_class = LeaveRequestForm
+    template_name = 'hr_app/leave/form.html'
     success_url = reverse_lazy('leave-request-list')
 
     def form_valid(self, form):
         form.instance.employee = self.request.user.employee_profile
-        form.instance.status = 'pending'
         messages.success(self.request, _("შვებულების მოთხოვნა წარმატებით გაიგზავნა"))
         return super().form_valid(form)
 
-@login_required
-def leave_request_update(request, pk):
-    leave_request = get_object_or_404(LeaveRequest, pk=pk)
-    
-    if not (hasattr(request.user, 'role') and request.user.role.role in ['admin', 'hr_manager']):
-        messages.error(request, _("თქვენ არ გაქვთ უფლება შეცვალოთ შვებულების სტატუსი!"))
-        return redirect('leave-list')
-    
-    if request.method == 'POST':
-        form = LeaveRequestUpdateForm(request.POST, instance=leave_request)
-        if form.is_valid():
-            form.save()
-            messages.success(request, _("შვებულების სტატუსი განახლდა!"))
-            return redirect('leave-list')
-    else:
-        form = LeaveRequestUpdateForm(instance=leave_request)
-    
-    return render(request, 'hr_app/leave/update_form.html', {'form': form, 'leave_request': leave_request})
+class LeaveRequestUpdateView(LoginRequiredMixin, UserPassesTestMixin, View):
+    def test_func(self):
+        return self.request.user.role.role in ['admin', 'hr_manager']
+
+    def post(self, request, pk):
+        leave_request = get_object_or_404(LeaveRequest, pk=pk)
+        action = request.POST.get('action')
+        
+        if action == 'approve':
+            leave_request.status = 'approved'
+            message = _("შვებულების მოთხოვნა დამტკიცებულია")
+        elif action == 'reject':
+            leave_request.status = 'rejected'
+            message = _("შვებულების მოთხოვნა უარყოფილია")
+        
+        leave_request.save()
+        
+        # Create notification for employee
+        Notification.objects.create(
+            user=leave_request.employee.user,
+            message=message
+        )
+        
+        messages.success(request, message)
+        return redirect('leave-request-list')
 
 class LeaveRequestDetailView(LoginRequiredMixin, DetailView):
     model = LeaveRequest
@@ -274,6 +387,31 @@ class NewsCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
         form.instance.posted_by = self.request.user
         return super().form_valid(form)
 
+class NewsUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
+    model = News
+    form_class = NewsForm
+    template_name = 'hr_app/news/form.html'
+    success_url = reverse_lazy('news-list')
+
+    def test_func(self):
+        return self.request.user.role.role in ['admin', 'hr_manager']
+
+    def form_valid(self, form):
+        messages.success(self.request, _("სიახლე წარმატებით განახლდა"))
+        return super().form_valid(form)
+
+class NewsDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
+    model = News
+    template_name = 'hr_app/news/delete.html'
+    success_url = reverse_lazy('news-list')
+
+    def test_func(self):
+        return self.request.user.role.role in ['admin', 'hr_manager']
+
+    def delete(self, request, *args, **kwargs):
+        messages.success(request, _("სიახლე წარმატებით წაიშალა"))
+        return super().delete(request, *args, **kwargs)
+
 # Notification Views
 @login_required
 def mark_notification_read(request, pk):
@@ -283,23 +421,22 @@ def mark_notification_read(request, pk):
     return JsonResponse({'status': 'success'})
 
 # Department Views
-class DepartmentListView(LoginRequiredMixin, ListView):
+class DepartmentListView(LoginRequiredMixin, UserPassesTestMixin, ListView):
     model = Department
     template_name = 'hr_app/department/list.html'
     context_object_name = 'departments'
+    
+    def test_func(self):
+        return self.request.user.role.role in ['admin', 'hr_manager']
 
 class DepartmentCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
     model = Department
-    form_class = DepartmentForm
     template_name = 'hr_app/department/form.html'
+    fields = ['name', 'description']
     success_url = reverse_lazy('department-list')
     
     def test_func(self):
-        return hasattr(self.request.user, 'role') and self.request.user.role.role in ['admin', 'hr_manager']
-    
-    def form_valid(self, form):
-        messages.success(self.request, _("დეპარტამენტი წარმატებით დაემატა!"))
-        return super().form_valid(form)
+        return self.request.user.role.role == 'admin'
 
 class DepartmentUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
     model = Department
@@ -380,58 +517,69 @@ class DashboardView(LoginRequiredMixin, TemplateView):
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        user = self.request.user
         
-        context['unread_notifications'] = user.notifications.filter(read=False)
-        context['recent_news'] = News.objects.all()[:5]
-        
-        if hasattr(user, 'role') and user.role.role in ['admin', 'hr_manager']:
-            context['total_employees'] = Employee.objects.count()
-            context['pending_leaves'] = LeaveRequest.objects.filter(status='pending').count()
-            context['active_employees'] = TimeLog.objects.filter(
-                check_in__date=timezone.now().date(),
-                check_out__isnull=True
-            ).count()
-        
-        if hasattr(user, 'employee_profile'):
-            context['leave_balance'] = user.employee_profile.vacation_days_left
-            context['recent_time_logs'] = TimeLog.objects.filter(
-                employee=user.employee_profile
+        try:
+            employee = self.request.user.employee_profile
+            context['employee'] = employee
+            
+            # Get recent time logs for the current user
+            recent_time_logs = TimeEntry.objects.filter(
+                employee=employee
             ).order_by('-check_in')[:5]
-            context['pending_requests'] = LeaveRequest.objects.filter(
-                employee=user.employee_profile,
-                status='pending'
+            context['recent_time_logs'] = recent_time_logs
+            
+            # Get pending leave requests
+            if hasattr(self.request.user, 'role') and self.request.user.role.role in ['admin', 'hr_manager']:
+                leave_requests = LeaveRequest.objects.filter(
+                    status='pending'
+                ).select_related('employee').order_by('-submitted_at')[:5]
+                
+                # Only calculate active leaves for admin/hr_manager
+                today = timezone.now().date()
+                active_leaves = LeaveRequest.objects.filter(
+                    status='approved',
+                    start_date__lte=today,
+                    end_date__gte=today
+                ).count()
+                context['active_leaves'] = active_leaves
+            else:
+                leave_requests = LeaveRequest.objects.filter(
+                    employee=employee,
+                    status='pending'
+                ).order_by('-submitted_at')[:5]
+            
+            context['leave_requests'] = leave_requests
+            
+            # Get recent news
+            context['news'] = News.objects.all().order_by('-posted_at')[:3]
+            
+            # Get unread notifications
+            context['notifications'] = Notification.objects.filter(
+                user=self.request.user,
+                read=False
+            )[:5]
+            
+            # Get total employees count (for admin/hr_manager)
+            if hasattr(self.request.user, 'role') and self.request.user.role.role in ['admin', 'hr_manager']:
+                context['total_employees'] = Employee.objects.count()
+            
+        except (Employee.DoesNotExist, AttributeError):
+            context['employee'] = None
+            messages.warning(
+                self.request, 
+                _("თქვენ არ გაქვთ თანამშრომლის პროფილი. დაუკავშირდით ადმინისტრატორს.")
             )
         
         return context
-
-class LeaveRequestUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
-    model = LeaveRequest
-    form_class = LeaveRequestForm
-    template_name = 'hr_app/leave/form.html'
-    success_url = reverse_lazy('leave-list')
-
-    def test_func(self):
-        # Only HR managers and admins can update leave requests
-        if not hasattr(self.request.user, 'role'):
-            return False
-        return self.request.user.role.role in ['admin', 'hr_manager']
-
-    def form_valid(self, form):
-        messages.success(self.request, _("შვებულების მოთხოვნა წარმატებით განახლდა!"))
-        return super().form_valid(form)
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['title'] = _('შვებულების მოთხოვნის განახლება')
-        context['submit_text'] = _('განახლება')
-        return context 
 
 @login_required
 def check_notifications(request):
     """
     AJAX endpoint to check for new notifications
     """
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Not authenticated'}, status=401)
+        
     unread_count = Notification.objects.filter(
         user=request.user,
         read=False
@@ -454,42 +602,12 @@ def check_notifications(request):
         'notifications': notifications_data
     })
 
-class SignupView(CreateView):
-    template_name = 'registration/signup.html'
-    form_class = UserSignupForm
-    success_url = reverse_lazy('login')
-
-    def form_valid(self, form):
-        # First save the user
-        user = form.save()
-        
-        try:
-            # Get or create role for the user
-            role, created = Role.objects.get_or_create(
-                user=user,
-                defaults={'role': 'employee'}
-            )
-            if not created:
-                role.role = 'employee'
-                role.save()
-            
-            # Create employee profile with first_name and last_name
-            Employee.objects.create(
-                user=user,
-                first_name=form.cleaned_data.get('first_name', ''),
-                last_name=form.cleaned_data.get('last_name', ''),
-                email=form.cleaned_data['email'],
-                start_date=timezone.now().date(),
-                job_title='თანამშრომელი'
-            )
-            
-            messages.success(self.request, _("რეგისტრაცია წარმატებით დასრულდა. გთხოვთ შეხვიდეთ სისტემაში."))
-            return redirect(self.success_url)
-            
-        except Exception as e:
-            user.delete()
-            messages.error(self.request, _("რეგისტრაციის დროს მოხდა შეცდომა. გთხოვთ სცადოთ თავიდან."))
-            return redirect('signup')
+class SignupView(TemplateView):
+    template_name = 'hr_app/auth/signup_disabled.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        return context
 
 class AdminDashboardView(LoginRequiredMixin, UserPassesTestMixin, TemplateView):
     template_name = 'hr_app/admin_dashboard.html'
@@ -522,143 +640,176 @@ class LeaveRequestUpdateStatusView(LoginRequiredMixin, UserPassesTestMixin, View
         
         return redirect('leave-request-list')
 
-class TimeTrackingView(LoginRequiredMixin, View):
-    def get(self, request):
+class TimeTrackingView(LoginRequiredMixin, ListView):
+    model = TimeEntry
+    template_name = 'hr_app/time_tracking/list.html'
+    context_object_name = 'time_entries'
+    paginate_by = 10
+
+    def get_queryset(self):
+        queryset = TimeEntry.objects.all().select_related('employee')
+        view_type = self.request.GET.get('view', 'daily')  # default to daily view
+        today = timezone.now().date()
+        
+        if self.request.user.role.role in ['admin', 'hr_manager']:
+            # Admin/HR manager view with search
+            search_query = self.request.GET.get('search')
+            if search_query:
+                queryset = queryset.filter(
+                    Q(employee__first_name__icontains=search_query) |
+                    Q(employee__last_name__icontains=search_query)
+                )
+        else:
+            # Regular employee view
+            queryset = queryset.filter(employee=self.request.user.employee_profile)
+
+        # Filter based on view type
+        if view_type == 'daily':
+            queryset = queryset.filter(check_in__date=today)
+        elif view_type == 'weekly':
+            week_start = today - timedelta(days=today.weekday())
+            queryset = queryset.filter(check_in__date__gte=week_start)
+        elif view_type == 'monthly':
+            queryset = queryset.filter(
+                check_in__year=today.year,
+                check_in__month=today.month
+            )
+        
+        return queryset.order_by('-check_in')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        view_type = self.request.GET.get('view', 'daily')
+        context['current_view'] = view_type
+        
+        if self.request.user.role.role in ['admin', 'hr_manager']:
+            # Admin view context
+            search_query = self.request.GET.get('search')
+            pending_entries = TimeEntry.objects.filter(check_out__isnull=True)
+            
+            if search_query:
+                pending_entries = pending_entries.filter(
+                    Q(employee__first_name__icontains=search_query) |
+                    Q(employee__last_name__icontains=search_query)
+                )
+            
+            context['pending_entries'] = pending_entries.select_related('employee')
+        else:
+            # Employee view context
+            employee = self.request.user.employee_profile
+            current_date = timezone.now()
+            
+            # Calculate totals based on view type
+            if view_type == 'daily':
+                entries = TimeEntry.objects.filter(
+                    employee=employee,
+                    check_in__date=current_date.date(),
+                    check_out__isnull=False
+                )
+                context['period_label'] = _("დღის ჯამი")
+            elif view_type == 'weekly':
+                week_start = current_date.date() - timedelta(days=current_date.weekday())
+                entries = TimeEntry.objects.filter(
+                    employee=employee,
+                    check_in__date__gte=week_start,
+                    check_out__isnull=False
+                )
+                context['period_label'] = _("კვირის ჯამი")
+            else:  # monthly
+                entries = TimeEntry.objects.filter(
+                    employee=employee,
+                    check_in__year=current_date.year,
+                    check_in__month=current_date.month,
+                    check_out__isnull=False
+                )
+                context['period_label'] = _("თვის ჯამი")
+
+            total_hours = sum(
+                (entry.check_out - entry.check_in).total_seconds() / 3600 
+                for entry in entries if entry.check_out
+            )
+            
+            context.update({
+                'period_total': round(total_hours, 2),
+                'current_time_entry': TimeEntry.objects.filter(
+                    employee=employee,
+                    check_out__isnull=True
+                ).first()
+            })
+        
+        return context
+
+class TimeTrackingCheckInView(LoginRequiredMixin, View):
+    def post(self, request):
         employee = request.user.employee_profile
-        now = timezone.now()
-        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
-        today_end = now.replace(hour=23, minute=59, second=59, microsecond=999999)
-        
-        # Get date range from query parameters, default to last 7 days
-        days = int(request.GET.get('days', 7))
-        start_date = today_start - timedelta(days=days)
-        
-        # Get current log
-        current_log = TimeLog.objects.filter(
+
+        # Check for active entry
+        active_entry = TimeEntry.objects.filter(
             employee=employee,
-            check_in__gte=today_start,
-            check_in__lte=today_end,
             check_out__isnull=True
         ).first()
-        
-        # Get today's logs
-        today_logs = TimeLog.objects.filter(
-            employee=employee,
-            check_in__gte=today_start,
-            check_in__lte=today_end
-        ).order_by('-check_in')
-        
-        # Get historical logs grouped by date
-        historical_logs = TimeLog.objects.filter(
-            employee=employee,
-            check_in__gte=start_date,
-            check_in__lt=today_start
-        ).annotate(
-            date=TruncDate('check_in')
-        ).order_by('-date', '-check_in')
-        
-        # For admins/managers, get all employees' logs
-        if hasattr(request.user, 'role') and request.user.role.role in ['admin', 'hr_manager']:
-            all_employees_current = TimeLog.objects.filter(
-                check_in__gte=today_start,
-                check_in__lte=today_end
-            ).select_related('employee').order_by('employee__first_name', '-check_in')
-            
-            # Group logs by employee
-            employees_logs = {}
-            for log in all_employees_current:
-                if log.employee not in employees_logs:
-                    employees_logs[log.employee] = []
-                employees_logs[log.employee].append(log)
-                
-            # Get historical data for all employees
-            all_employees_historical = TimeLog.objects.filter(
-                check_in__gte=start_date,
-                check_in__lt=today_start
-            ).select_related('employee').annotate(
-                date=TruncDate('check_in')
-            ).order_by('employee__first_name', '-date', '-check_in')
-            
-            employees_historical = {}
-            for log in all_employees_historical:
-                if log.employee not in employees_historical:
-                    employees_historical[log.employee] = {}
-                if log.date not in employees_historical[log.employee]:
-                    employees_historical[log.employee][log.date] = []
-                employees_historical[log.employee][log.date].append(log)
-        else:
-            employees_logs = None
-            employees_historical = None
 
-        context = {
-            'current_log': current_log,
-            'today_logs': today_logs,
-            'historical_logs': historical_logs,
-            'employees_logs': employees_logs,
-            'employees_historical': employees_historical,
-            'is_admin': request.user.role.role in ['admin', 'hr_manager'] if hasattr(request.user, 'role') else False,
-            'is_in_office': True,  # Always allow for development
-            'client_ip': self.get_client_ip(request),
-            'selected_days': days,
-        }
-        return render(request, 'hr_app/time_tracking.html', context)
+        if active_entry:
+            messages.error(
+                request, 
+                _("თქვენ უკვე დაწყებული გაქვთ სამუშაო დრო %(time)s-ზე") % {
+                    'time': active_entry.check_in.strftime('%H:%M')
+                }
+            )
+            return redirect('time-tracking')
 
-    def post(self, request):
-        print("POST request received")
-        action = request.POST.get('action')
-        employee = request.user.employee_profile
-        client_ip = self.get_client_ip(request)
-        now = timezone.now()
-        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
-        today_end = now.replace(hour=23, minute=59, second=59, microsecond=999999)
-        
-        print(f"Action: {action}, Employee: {employee}, IP: {client_ip}")
-
+        # Create new time entry
         try:
-            # Get active session
-            active_session = TimeLog.objects.filter(
+            TimeEntry.objects.create(
                 employee=employee,
-                check_in__gte=today_start,
-                check_in__lte=today_end,
-                check_out__isnull=True
-            ).first()
-            
-            print(f"Active session found: {active_session}")
-
-            if action == 'check_in':
-                if active_session:
-                    messages.error(request, _("თქვენ უკვე დაფიქსირებული ხართ. ჯერ დაასრულეთ მიმდინარე სესია."))
-                else:
-                    new_log = TimeLog.objects.create(
-                        employee=employee,
-                        check_in=now,
-                        ip_address=client_ip
-                    )
-                    print(f"Created new log: {new_log}")
-                    messages.success(request, _("სამუშაო დღე დაწყებულია"))
-
-            elif action == 'check_out':
-                if active_session:
-                    active_session.check_out = now
-                    active_session.save()
-                    print(f"Updated log with checkout: {active_session}")
-                    messages.success(request, _("სამუშაო დღე დასრულებულია"))
-                else:
-                    messages.error(request, _("აქტიური სამუშაო სესია ვერ მოიძებნა"))
-
+                ip_address=request.META.get('REMOTE_ADDR', '0.0.0.0')
+            )
+            messages.success(request, _("სამუშაო დრო დაიწყო"))
         except Exception as e:
-            print(f"Error occurred: {str(e)}")
-            messages.error(request, str(e))
-
+            messages.error(request, _("შეცდომა სამუშაო დროის დაწყებისას. გთხოვთ სცადოთ თავიდან."))
+            
         return redirect('time-tracking')
 
-    def get_client_ip(self, request):
-        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
-        if x_forwarded_for:
-            ip = x_forwarded_for.split(',')[0]
-        else:
-            ip = request.META.get('REMOTE_ADDR')
-        return ip 
+class TimeTrackingCheckOutView(LoginRequiredMixin, View):
+    def post(self, request):
+        try:
+            # Check if admin is closing someone else's entry
+            entry_id = request.POST.get('entry_id')
+            if entry_id and request.user.role.role in ['admin', 'hr_manager']:
+                current_entry = TimeEntry.objects.get(id=entry_id)
+            else:
+                current_entry = TimeEntry.objects.filter(
+                    employee=request.user.employee_profile,
+                    check_out__isnull=True
+                ).first()
+
+            if not current_entry:
+                messages.error(request, _("აქტიური სესია ვერ მოიძებნა"))
+                return redirect('time-tracking')
+
+            current_entry.check_out = timezone.now()
+            current_entry.save()
+            
+            duration = current_entry.check_out - current_entry.check_in
+            hours = duration.total_seconds() / 3600
+            
+            if request.user.role.role in ['admin', 'hr_manager']:
+                messages.success(
+                    request, 
+                    _("%(employee)s-ის სამუშაო დრო დასრულდა. ნამუშევარი დრო: %(hours).2f საათი") % {
+                        'employee': current_entry.employee.get_full_name(),
+                        'hours': hours
+                    }
+                )
+            else:
+                messages.success(
+                    request, 
+                    _("სამუშაო დრო დასრულდა. იმუშავეთ %(hours).2f საათი") % {'hours': hours}
+                )
+        except Exception as e:
+            messages.error(request, _("შეცდომა სამუშაო დროის დასრულებისას. გთხოვთ სცადოთ თავიდან."))
+        
+        return redirect('time-tracking')
 
 class OrganizationalStructureView(LoginRequiredMixin, TemplateView):
     template_name = 'hr_app/organization/structure.html'
@@ -675,4 +826,98 @@ class OrganizationalStructureView(LoginRequiredMixin, TemplateView):
             }
             
         context['structure'] = structure
+        return context 
+
+class ReportsAnalyticsView(LoginRequiredMixin, UserPassesTestMixin, TemplateView):
+    template_name = 'hr_app/reports/dashboard.html'
+    
+    def test_func(self):
+        return self.request.user.role.role in ['admin', 'hr_manager']
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        today = timezone.now().date()
+        start_of_month = today.replace(day=1)
+        
+        # Employee statistics
+        context['total_employees'] = Employee.objects.count()
+        context['employees_by_department'] = Department.objects.annotate(
+            employee_count=Count('employees')
+        )
+        
+        # Time tracking statistics
+        context['time_entries'] = TimeEntry.objects.filter(
+            check_in__date__gte=start_of_month
+        ).values('employee__first_name', 'employee__last_name').annotate(
+            total_hours=Sum('duration_hours'),
+            avg_hours=Avg('duration_hours'),
+            days_worked=Count('check_in__date', distinct=True)
+        )
+        
+        # Leave statistics
+        context['leave_requests'] = LeaveRequest.objects.filter(
+            submitted_at__date__gte=start_of_month
+        ).values('status').annotate(count=Count('id'))
+        
+        # Department statistics
+        context['departments'] = Department.objects.annotate(
+            employee_count=Count('employees'),
+            avg_vacation_days=Avg('employees__vacation_days_left')
+        )
+        
+        return context 
+
+class PerformanceReviewListView(LoginRequiredMixin, ListView):
+    model = PerformanceReview
+    template_name = 'hr_app/performance/review_list.html'
+    context_object_name = 'reviews'
+    paginate_by = 10
+
+    def get_queryset(self):
+        if self.request.user.role.role in ['admin', 'hr_manager']:
+            return PerformanceReview.objects.all().order_by('-review_date')
+        return PerformanceReview.objects.filter(
+            employee=self.request.user.employee_profile
+        ).order_by('-review_date')
+
+class PerformanceReviewCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
+    model = PerformanceReview
+    template_name = 'hr_app/performance/review_form.html'
+    form_class = PerformanceReviewForm
+    success_url = reverse_lazy('performance-review-list')
+
+    def test_func(self):
+        return self.request.user.role.role in ['admin', 'hr_manager']
+
+    def form_valid(self, form):
+        form.instance.reviewer = self.request.user.employee_profile
+        messages.success(self.request, _("შეფასება წარმატებით დაემატა"))
+        return super().form_valid(form)
+
+class PerformanceReviewDetailView(LoginRequiredMixin, DetailView):
+    model = PerformanceReview
+    template_name = 'hr_app/performance/review_detail.html'
+    context_object_name = 'review'
+
+    def get_queryset(self):
+        if self.request.user.role.role in ['admin', 'hr_manager']:
+            return PerformanceReview.objects.all()
+        return PerformanceReview.objects.filter(employee=self.request.user.employee_profile)
+
+class PerformanceReviewUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
+    model = PerformanceReview
+    template_name = 'hr_app/performance/review_form.html'
+    form_class = PerformanceReviewForm
+    success_url = reverse_lazy('performance-review-list')
+
+    def test_func(self):
+        return self.request.user.role.role in ['admin', 'hr_manager']
+
+    def form_valid(self, form):
+        messages.success(self.request, _("შეფასება წარმატებით განახლდა"))
+        return super().form_valid(form)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['is_update'] = True
         return context 

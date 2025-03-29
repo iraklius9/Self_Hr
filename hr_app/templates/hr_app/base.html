@@ -1,6 +1,7 @@
 {% load static %}
 {% load django_bootstrap5 %}
 {% load i18n %}
+{% load hr_app_filters %}
 <!DOCTYPE html>
 <html lang="ka">
 <head>
@@ -9,64 +10,185 @@
     <title>HR Management System</title>
     {% bootstrap_css %}
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    {% block extra_css %}{% endblock %}
+    {% block extra_css %}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/css/bootstrap-datepicker.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/material_blue.css">
+    {% endblock %}
     <link rel="stylesheet" href="{% static 'hr_app/css/style.css' %}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="shortcut icon" href="{% static 'hr_app/img/favicon.ico' %}" type="image/x-icon">
+    <style>
+        .sidebar {
+            min-height: 100vh;
+            background-color: #343a40;
+            padding-top: 20px;
+        }
+        .sidebar .nav-link {
+            color: #fff;
+            padding: 10px 20px;
+        }
+        .sidebar .nav-link:hover {
+            background-color: #495057;
+        }
+        .sidebar .nav-link.active {
+            background-color: #0d6efd;
+        }
+        .main-content {
+            padding: 20px;
+        }
+        .navbar {
+            background-color: #fff;
+            box-shadow: 0 2px 4px rgba(0,0,0,.1);
+        }
+    </style>
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <div class="container">
-            <a class="navbar-brand" href="{% url 'dashboard' %}">HR System</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                {% if user.is_authenticated %}
-                <ul class="navbar-nav">
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'dashboard' %}">მთავარი</a>
-                    </li>
-                    {% if user.role.role in 'admin,hr_manager' %}
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'employee-list' %}">თანამშრომლები</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'department-list' %}">დეპარტამენტები</a>
-                    </li>
-                    {% endif %}
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'leave-request-list' %}">შვებულებები</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.resolver_match.url_name == 'time-tracking' %}active{% endif %}" 
-                           href="{% url 'time-tracking' %}">
-                            {% trans "დროის აღრიცხვა" %}
+    {% if user.is_authenticated %}
+        <div class="container-fluid">
+            <div class="row">
+                <!-- Sidebar -->
+                <div class="col-md-2 px-0 position-fixed sidebar">
+                    <div class="text-center mb-4">
+                        <h4 class="text-white">HRMS</h4>
+                    </div>
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" 
+                               href="{% url 'dashboard' %}">
+                                {% trans "მთავარი" %}
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if 'time-tracking' in request.path %}active{% endif %}" 
+                               href="{% url 'time-tracking' %}">
+                                {% trans "დროის აღრიცხვა" %}
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if 'leave-request' in request.path %}active{% endif %}" 
+                               href="{% url 'leave-request-list' %}">
+                                {% trans "შვებულებები" %}
+                            </a>
+                        </li>
+                        {% if request.user.role.role == 'admin' or request.user.role.role == 'hr_manager' %}
+                            <li class="nav-item">
+                                <a class="nav-link {% if 'employee' in request.path %}active{% endif %}" 
+                                   href="{% url 'employee-list' %}">
+                                    {% trans "თანამშრომლები" %}
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link {% if 'department' in request.path %}active{% endif %}" 
+                                   href="{% url 'department-list' %}">
+                                    {% trans "დეპარტამენტები" %}
+                                </a>
+                            </li>
+                        {% endif %}
+                        <li class="nav-item">
+                            <a class="nav-link {% if 'news' in request.path %}active{% endif %}" 
+                               href="{% url 'news-list' %}">
+                                {% trans "სიახლეები" %}
+                            </a>
+                        </li>
+                    </ul>
+                    <div class="dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-bell"></i>
+                            <span id="notification-count" class="badge bg-danger rounded-pill"></span>
                         </a>
-                    </li>
-                </ul>
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'logout' %}">გასვლა</a>
-                    </li>
-                </ul>
-                {% endif %}
+                        <ul id="notification-list" class="dropdown-menu dropdown-menu-end" style="width: 300px;">
+                            <!-- Notifications will be inserted here by JavaScript -->
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Main Content -->
+                <div class="col-md-10 offset-md-2 main-content">
+                    <!-- Header -->
+                    <nav class="navbar navbar-expand-lg navbar-light mb-4">
+                        <div class="container-fluid">
+                            <div class="flex-grow-1"></div>
+                            <div class="dropdown">
+                                <button class="btn btn-link dropdown-toggle text-dark" type="button" id="userDropdown" 
+                                        data-bs-toggle="dropdown" aria-expanded="false">
+                                    {{ request.user.get_full_name }}
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                                    <li>
+                                        <a class="dropdown-item" href="{% url 'logout' %}">
+                                            {% trans "გასვლა" %}
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </nav>
+
+                    <!-- Messages -->
+                    {% bootstrap_messages %}
+
+                    <!-- Content -->
+                    {% block content %}{% endblock %}
+                </div>
             </div>
         </div>
-    </nav>
 
-    <main>
-        {% bootstrap_messages %}
-        {% block content %}
+        <footer class="footer mt-auto py-3 bg-light">
+            <div class="container text-center">
+                <span class="text-muted">© 2025 HR Management System</span>
+            </div>
+        </footer>
+
+        {% bootstrap_javascript %}
+        {% block extra_js %}
+        <script src="{% static 'hr_app/js/notifications.js' %}"></script>
+        <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+        <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/ka.js"></script>
+        <script>
+            function checkNotifications() {
+                fetch('{% url "check-notifications" %}')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.unread_count > 0) {
+                            document.getElementById('notification-count').textContent = data.unread_count;
+                        }
+                    })
+                    .catch(error => console.error('Error checking notifications:', error));
+            }
+            setInterval(checkNotifications, 30000);
+
+            document.addEventListener('DOMContentLoaded', function() {
+                // Initialize all date inputs
+                flatpickr("input[type=date]", {
+                    locale: "ka",
+                    dateFormat: "Y-m-d",
+                    allowInput: true,
+                    disableMobile: true,
+                    monthSelectorType: "static",
+                    yearSelectorType: "static"
+                });
+
+                // Initialize all datetime inputs
+                flatpickr("input[type=datetime-local]", {
+                    locale: "ka",
+                    dateFormat: "Y-m-d H:i",
+                    enableTime: true,
+                    time_24hr: true,
+                    allowInput: true,
+                    disableMobile: true,
+                    monthSelectorType: "static",
+                    yearSelectorType: "static"
+                });
+            });
+        </script>
         {% endblock %}
-    </main>
-
-    <footer class="footer mt-auto py-3 bg-light">
-        <div class="container text-center">
-            <span class="text-muted">© 2025 HR Management System</span>
+    {% else %}
+        <div class="container mt-5">
+            {% bootstrap_messages %}
+            {% block unauthenticated_content %}{% endblock %}
         </div>
-    </footer>
-
-    {% bootstrap_javascript %}
-    {% block extra_js %}{% endblock %}
+        {% bootstrap_javascript %}
+    {% endif %}
 </body>
 </html> 

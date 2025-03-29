@@ -1,0 +1,158 @@
+{% extends 'hr_app/base.html' %}
+{% load django_bootstrap5 %}
+{% load i18n %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0">{% trans "შვებულების მოთხოვნები" %}</h2>
+        
+        {% if request.user.role.role in 'admin,hr_manager' and active_leaves %}
+        <div class="d-flex align-items-center">
+            <div class="me-3">
+                <div class="card">
+                    <div class="card-body p-2">
+                        <div class="d-flex align-items-center">
+                            <div class="rounded-circle bg-success p-2 me-2">
+                                <i class="bi bi-calendar-check text-white"></i>
+                            </div>
+                            <div>
+                                <div class="small text-muted">{% trans "აქტიური შვებულებები" %}</div>
+                                <div class="fw-bold">{{ active_leaves }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <a href="{% url 'leave-request-create' %}" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-1"></i> {% trans "ახალი მოთხოვნა" %}
+        </a>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header bg-light">
+            <div class="row align-items-center">
+                <div class="col">
+                    <h5 class="mb-0">{% trans "შვებულების მოთხოვნები" %}</h5>
+                </div>
+                <div class="col-auto">
+                    <form method="get" class="d-flex">
+                        <select name="status" class="form-select me-2">
+                            <option value="">{% trans "ყველა სტატუსი" %}</option>
+                            <option value="pending" {% if request.GET.status == 'pending' %}selected{% endif %}>
+                                {% trans "განხილვის პროცესში" %}
+                            </option>
+                            <option value="approved" {% if request.GET.status == 'approved' %}selected{% endif %}>
+                                {% trans "დამტკიცებული" %}
+                            </option>
+                            <option value="rejected" {% if request.GET.status == 'rejected' %}selected{% endif %}>
+                                {% trans "უარყოფილი" %}
+                            </option>
+                        </select>
+                        <button type="submit" class="btn btn-outline-primary">{% trans "ფილტრი" %}</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            {% if leave_requests %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead>
+                        <tr>
+                            {% if user.role.role == 'admin' or user.role.role == 'hr_manager' %}
+                            <th>{% trans "თანამშრომელი" %}</th>
+                            {% endif %}
+                            <th>{% trans "ტიპი" %}</th>
+                            <th>{% trans "საწყისი თარიღი" %}</th>
+                            <th>{% trans "დასრულების თარიღი" %}</th>
+                            <th>{% trans "სტატუსი" %}</th>
+                            <th>{% trans "მიზეზი" %}</th>
+                            {% if user.role.role == 'admin' or user.role.role == 'hr_manager' %}
+                            <th>{% trans "მოქმედებები" %}</th>
+                            {% endif %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for leave_request in leave_requests %}
+                        <tr>
+                            {% if user.role.role == 'admin' or user.role.role == 'hr_manager' %}
+                            <td>{{ leave_request.employee.get_full_name }}</td>
+                            {% endif %}
+                            <td>{{ leave_request.get_leave_type_display }}</td>
+                            <td>{{ leave_request.start_date|date:"d M Y" }}</td>
+                            <td>{{ leave_request.end_date|date:"d M Y" }}</td>
+                            <td>
+                                <span class="badge {% if leave_request.status == 'approved' %}bg-success{% elif leave_request.status == 'pending' %}bg-warning{% else %}bg-danger{% endif %}">
+                                    {{ leave_request.get_status_display }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="text-truncate d-inline-block" style="max-width: 150px;" 
+                                    data-bs-toggle="tooltip" data-bs-placement="top" title="{{ leave_request.reason }}">
+                                    {{ leave_request.reason|truncatechars:20 }}
+                                </span>
+                            </td>
+                            {% if user.role.role == 'admin' or user.role.role == 'hr_manager' %}
+                            <td>
+                                <div class="btn-group">
+                                    <a href="{% url 'leave-request-detail' leave_request.pk %}" class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-eye"></i> {% trans "ნახვა" %}
+                                    </a>
+                                    
+                                    {% if leave_request.status == 'pending' %}
+                                    <form method="post" action="{% url 'leave-request-update' leave_request.pk %}" class="d-inline">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="status" value="approved">
+                                        <button type="submit" class="btn btn-sm btn-outline-success mx-1">
+                                            <i class="bi bi-check-circle"></i> {% trans "დამტკიცება" %}
+                                        </button>
+                                    </form>
+                                    <form method="post" action="{% url 'leave-request-update' leave_request.pk %}" class="d-inline">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="status" value="rejected">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                                            <i class="bi bi-x-circle"></i> {% trans "უარყოფა" %}
+                                        </button>
+                                    </form>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            {% endif %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-calendar-x fs-1 text-muted mb-3"></i>
+                <h5>{% trans "შვებულების მოთხოვნები არ მოიძებნა" %}</h5>
+                <p class="text-muted">{% trans "შექმენით ახალი მოთხოვნა ღილაკზე დაჭერით" %}</p>
+            </div>
+            {% endif %}
+        </div>
+        
+        {% if is_paginated %}
+        <div class="card-footer">
+            {% bootstrap_pagination page_obj %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Initialize tooltips
+    document.addEventListener('DOMContentLoaded', function() {
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        })
+    })
+</script>
+{% endblock %} 

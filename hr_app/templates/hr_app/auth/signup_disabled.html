@@ -1,0 +1,26 @@
+{% extends 'hr_app/base.html' %}
+{% load django_bootstrap5 %}
+{% load i18n %}
+
+{% block unauthenticated_content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow-lg" style="border: 3px solid #0d6efd; border-radius: 8px;">
+                <div class="card-header bg-primary text-white" style="border-bottom: 2px solid #0a58ca;">
+                    <h4 class="mb-0">{% trans "რეგისტრაცია" %}</h4>
+                </div>
+                <div class="card-body p-4 text-center">
+                    <i class="bi bi-shield-lock fs-1 text-muted mb-3"></i>
+                    <h5>{% trans "რეგისტრაცია მხოლოდ ადმინისტრატორის მიერაა შესაძლებელი" %}</h5>
+                    <p class="text-muted mt-3">{% trans "გთხოვთ, დაუკავშირდეთ ადმინისტრატორს ანგარიშის შესაქმნელად." %}</p>
+                    
+                    <div class="mt-4">
+                        <a href="{% url 'login' %}" class="btn btn-primary">{% trans "შესვლა" %}</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

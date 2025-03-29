@@ -3,58 +3,76 @@
 {% load i18n %}
 
 {% block content %}
-<div class="container mt-4">
+<div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2>{% trans "დეპარტამენტები" %}</h2>
-        {% if user.role.role in 'admin,hr_manager' %}
+        {% if request.user.role.role == 'admin' %}
         <a href="{% url 'department-create' %}" class="btn btn-primary">
-            {% trans "დეპარტამენტის დამატება" %}
+            {% trans "ახალი დეპარტამენტი" %}
         </a>
         {% endif %}
     </div>
 
-    <div class="card">
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>{% trans "დეპარტამენტის სახელი" %}</th>
-                            <th>{% trans "აღწერა" %}</th>
-                            <th>{% trans "თანამშრომლების რაოდენობა" %}</th>
-                            {% if user.role.role in 'admin,hr_manager' %}
-                            <th>{% trans "მოქმედებები" %}</th>
-                            {% endif %}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for department in departments %}
-                        <tr>
-                            <td>{{ department.name }}</td>
-                            <td>{{ department.description|truncatewords:30 }}</td>
-                            <td>{{ department.employees.count }}</td>
-                            {% if user.role.role in 'admin,hr_manager' %}
-                            <td>
-                                <div class="btn-group">
-                                    <a href="{% url 'department-update' pk=department.pk %}" class="btn btn-sm btn-outline-primary">
-                                        {% trans "რედაქტირება" %}
-                                    </a>
-                                    <a href="{% url 'department-delete' pk=department.pk %}" class="btn btn-sm btn-outline-danger">
-                                        {% trans "წაშლა" %}
-                                    </a>
-                                </div>
-                            </td>
-                            {% endif %}
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="4" class="text-center">{% trans "დეპარტამენტები არ არის" %}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+    <div class="row">
+        {% for department in departments %}
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">{{ department.name }}</h5>
+                    <p class="card-text">{{ department.description }}</p>
+                    <p class="card-text">
+                        <small class="text-muted">
+                            {% trans "თანამშრომლების რაოდენობა:" %} {{ department.employees.count }}
+                        </small>
+                    </p>
+                </div>
+                {% if request.user.role.role == 'admin' %}
+                <div class="card-footer">
+                    <a href="{% url 'department-update' department.id %}" class="btn btn-sm btn-warning">
+                        {% trans "რედაქტირება" %}
+                    </a>
+                    <button type="button" class="btn btn-sm btn-danger" 
+                            data-bs-toggle="modal" 
+                            data-bs-target="#deleteDeptModal{{ department.id }}">
+                        {% trans "წაშლა" %}
+                    </button>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Delete Modals -->
+{% for department in departments %}
+<div class="modal fade" id="deleteDeptModal{{ department.id }}" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">{% trans "დეპარტამენტის წაშლა" %}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>{% trans "ნამდვილად გსურთ წაშალოთ დეპარტამენტი" %} {{ department.name }}?</p>
+                {% if department.employees.exists %}
+                <div class="alert alert-warning">
+                    {% trans "გაფრთხილება: ამ დეპარტამენტში არის" %} {{ department.employees.count }} 
+                    {% trans "თანამშრომელი" %}
+                </div>
+                {% endif %}
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    {% trans "გაუქმება" %}
+                </button>
+                <form method="post" action="{% url 'department-delete' department.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">{% trans "წაშლა" %}</button>
+                </form>
             </div>
         </div>
     </div>
 </div>
+{% endfor %}
 {% endblock %} 

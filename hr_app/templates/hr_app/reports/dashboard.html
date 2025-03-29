@@ -1,0 +1,118 @@
+{% extends 'hr_app/base.html' %}
+{% load django_bootstrap5 %}
+{% load i18n %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.css">
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5>{% trans "თანამშრომლები დეპარტამენტების მიხედვით" %}</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="departmentChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5>{% trans "შვებულების სტატისტიკა" %}</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="leaveChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5>{% trans "სამუშაო დროის სტატისტიკა" %}</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>{% trans "თანამშრომელი" %}</th>
+                            <th>{% trans "ნამუშევარი საათები" %}</th>
+                            <th>{% trans "საშუალო საათები დღეში" %}</th>
+                            <th>{% trans "ნამუშევარი დღეები" %}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for entry in time_entries %}
+                        <tr>
+                            <td>{{ entry.employee__first_name }} {{ entry.employee__last_name }}</td>
+                            <td>{{ entry.total_hours|floatformat:1 }}</td>
+                            <td>{{ entry.avg_hours|floatformat:1 }}</td>
+                            <td>{{ entry.days_worked }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Department Chart
+    const deptCtx = document.getElementById('departmentChart').getContext('2d');
+    new Chart(deptCtx, {
+        type: 'bar',
+        data: {
+            labels: [{% for dept in departments %}'{{ dept.name }}',{% endfor %}],
+            datasets: [{
+                label: '{% trans "თანამშრომლების რაოდენობა" %}',
+                data: [{% for dept in departments %}{{ dept.employee_count }},{% endfor %}],
+                backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            }
+        }
+    });
+
+    // Leave Chart
+    const leaveCtx = document.getElementById('leaveChart').getContext('2d');
+    new Chart(leaveCtx, {
+        type: 'pie',
+        data: {
+            labels: [{% for leave in leave_requests %}'{{ leave.status }}',{% endfor %}],
+            datasets: [{
+                data: [{% for leave in leave_requests %}{{ leave.count }},{% endfor %}],
+                backgroundColor: [
+                    'rgba(255, 99, 132, 0.5)',
+                    'rgba(75, 192, 192, 0.5)',
+                    'rgba(255, 206, 86, 0.5)'
+                ]
+            }]
+        },
+        options: {
+            responsive: true
+        }
+    });
+});
+</script>
+{% endblock %} 

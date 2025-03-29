@@ -3,12 +3,12 @@
 {% load i18n %}
 
 {% block content %}
-<div class="container mt-4">
+<div class="container-fluid">
     <div class="row justify-content-center">
-        <div class="col-md-6">
+        <div class="col-md-8">
             <div class="card">
                 <div class="card-header">
-                    <h3 class="text-center">{% trans "რეგისტრაცია" %}</h3>
+                    <h3>{% trans "შვებულების მოთხოვნა" %}</h3>
                 </div>
                 <div class="card-body">
                     <form method="post" novalidate>
@@ -16,18 +16,28 @@
                         {% bootstrap_form form %}
                         <div class="d-grid gap-2">
                             <button type="submit" class="btn btn-primary">
-                                {% trans "რეგისტრაცია" %}
+                                {% trans "გაგზავნა" %}
                             </button>
+                            <a href="{% url 'leave-request-list' %}" class="btn btn-secondary">
+                                {% trans "გაუქმება" %}
+                            </a>
                         </div>
                     </form>
-                    <div class="mt-3 text-center">
-                        <p>{% trans "უკვე გაქვთ ანგარიში?" %} 
-                            <a href="{% url 'login' %}">{% trans "შესვლა" %}</a>
-                        </p>
-                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        $('#id_start_date, #id_end_date').datepicker({
+            format: 'dd/mm/yyyy',
+            language: 'ka',
+            autoclose: true
+        });
+    });
+</script>
 {% endblock %} 

@@ -1,0 +1,88 @@
+{% extends 'hr_app/base.html' %}
+{% load django_bootstrap5 %}
+{% load i18n %}
+
+{% block extra_css %}
+<style>
+.org-chart {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.department-card {
+    border: 2px solid #007bff;
+    border-radius: 8px;
+    margin: 10px;
+    padding: 15px;
+    min-width: 300px;
+}
+
+.employee-card {
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    margin: 5px;
+    padding: 10px;
+    background-color: #f8f9fa;
+}
+
+.manager-card {
+    border-color: #28a745;
+    background-color: #e9f7ef;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>{% trans "ორგანიზაციული სტრუქტურა" %}</h2>
+    </div>
+
+    <div class="org-chart">
+        {% for department, data in structure.items %}
+        <div class="department-card">
+            <h3 class="text-center mb-3">{{ department.name }}</h3>
+            
+            {% if data.managers %}
+            <div class="managers mb-3">
+                <h5>{% trans "მენეჯერები" %}</h5>
+                {% for manager in data.managers %}
+                <div class="employee-card manager-card">
+                    <div class="d-flex align-items-center">
+                        {% if manager.profile_picture %}
+                        <img src="{{ manager.profile_picture.url }}" class="rounded-circle me-2" width="40" height="40">
+                        {% endif %}
+                        <div>
+                            <h6 class="mb-1">{{ manager.get_full_name }}</h6>
+                            <small class="text-muted">{{ manager.job_title }}</small>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <div class="employees">
+                <h5>{% trans "თანამშრომლები" %}</h5>
+                {% for employee in data.employees %}
+                {% if not employee in data.managers %}
+                <div class="employee-card">
+                    <div class="d-flex align-items-center">
+                        {% if employee.profile_picture %}
+                        <img src="{{ employee.profile_picture.url }}" class="rounded-circle me-2" width="40" height="40">
+                        {% endif %}
+                        <div>
+                            <h6 class="mb-1">{{ employee.get_full_name }}</h6>
+                            <small class="text-muted">{{ employee.job_title }}</small>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %} 

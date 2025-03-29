@@ -1,0 +1,208 @@
+{% extends 'hr_app/base.html' %}
+{% load django_bootstrap5 %}
+{% load i18n %}
+
+{% block content %}
+<div class="container-fluid">
+    {% if request.user.role.role == 'admin' or request.user.role.role == 'hr_manager' %}
+        <!-- Search form for admins -->
+        <div class="card mb-3">
+            <div class="card-body">
+                <form method="get" class="row g-3 align-items-center">
+                    <div class="col-auto flex-grow-1">
+                        <div class="input-group">
+                            <input type="text" name="search" class="form-control" placeholder="{% trans 'თანამშრომლის სახელით ძიება...' %}" value="{{ request.GET.search }}">
+                            <button class="btn btn-primary" type="submit">
+                                <i class="fas fa-search"></i> {% trans "ძიება" %}
+                            </button>
+                            {% if request.GET.search %}
+                                <a href="{% url 'time-tracking' %}" class="btn btn-secondary">
+                                    <i class="fas fa-times"></i> {% trans "გასუფთავება" %}
+                                </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    {% endif %}
+
+    <div class="card">
+        <div class="card-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <h4>{% trans "დროის აღრიცხვა" %}</h4>
+                <div class="btn-group">
+                    <a href="?view=daily{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}" 
+                       class="btn btn-outline-primary {% if current_view == 'daily' %}active{% endif %}">
+                        {% trans "დღიური" %}
+                    </a>
+                    <a href="?view=weekly{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}" 
+                       class="btn btn-outline-primary {% if current_view == 'weekly' %}active{% endif %}">
+                        {% trans "კვირის" %}
+                    </a>
+                    <a href="?view=monthly{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}" 
+                       class="btn btn-outline-primary {% if current_view == 'monthly' %}active{% endif %}">
+                        {% trans "თვის" %}
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        {% if request.user.role.role == 'admin' or request.user.role.role == 'hr_manager' %}
+            <!-- Admin View -->
+            <div class="card-body">
+                <h5>{% trans "აქტიური სესიები" %}</h5>
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>{% trans "თანამშრომელი" %}</th>
+                                <th>{% trans "დაწყების დრო" %}</th>
+                                <th>{% trans "ხანგრძლივობა" %}</th>
+                                <th>IP</th>
+                                <th>{% trans "მოქმედება" %}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for entry in pending_entries %}
+                            <tr>
+                                <td>{{ entry.employee.get_full_name }}</td>
+                                <td>{{ entry.check_in|date:"d M Y H:i" }}</td>
+                                <td>{{ entry.check_in|timesince }}</td>
+                                <td>{{ entry.ip_address }}</td>
+                                <td>
+                                    <form method="post" action="{% url 'time-tracking-checkout' %}" class="d-inline">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="entry_id" value="{{ entry.id }}">
+                                        <button type="submit" class="btn btn-warning btn-sm">
+                                            {% trans "დასრულება" %}
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center">{% trans "აქტიური სესიები არ არის" %}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        {% else %}
+            <!-- Employee View -->
+            <div class="card-body">
+                <div class="row mb-4">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">{{ period_label }}</h5>
+                                <p class="card-text display-6">{{ period_total }} {% trans "საათი" %}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="text-center mb-4">
+                    {% if current_time_entry %}
+                        <form method="post" action="{% url 'time-tracking-checkout' %}" class="d-inline">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-danger btn-lg">
+                                <i class="fas fa-stop-circle"></i> {% trans "მუშაობის დასრულება" %}
+                            </button>
+                        </form>
+                    {% else %}
+                        <form method="post" action="{% url 'time-tracking-checkin' %}" class="d-inline">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-success btn-lg">
+                                <i class="fas fa-play-circle"></i> {% trans "მუშაობის დაწყება" %}
+                            </button>
+                        </form>
+                    {% endif %}
+                </div>
+            </div>
+        {% endif %}
+
+        <!-- Time Entry History -->
+        <div class="card-body border-top">
+            <h5>{% trans "დროის ისტორია" %}</h5>
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            {% if request.user.role.role == 'admin' or request.user.role.role == 'hr_manager' %}
+                                <th>{% trans "თანამშრომელი" %}</th>
+                            {% endif %}
+                            <th>{% trans "თარიღი" %}</th>
+                            <th>{% trans "შემოსვლა" %}</th>
+                            <th>{% trans "გასვლა" %}</th>
+                            <th>{% trans "სამუშაო საათები" %}</th>
+                            <th>IP</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for entry in time_entries %}
+                        <tr>
+                            {% if request.user.role.role == 'admin' or request.user.role.role == 'hr_manager' %}
+                                <td>{{ entry.employee.get_full_name }}</td>
+                            {% endif %}
+                            <td>{{ entry.check_in|date:"d M Y" }}</td>
+                            <td>{{ entry.check_in|time:"H:i" }}</td>
+                            <td>{{ entry.check_out|time:"H:i"|default:"-" }}</td>
+                            <td>{{ entry.duration_hours|floatformat:2 }}</td>
+                            <td>{{ entry.ip_address }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="{% if request.user.role.role == 'admin' or request.user.role.role == 'hr_manager' %}6{% else %}5{% endif %}" class="text-center">
+                                {% trans "ჩანაწერები არ არის" %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% if page_obj.paginator.num_pages > 1 %}
+                {% bootstrap_pagination page_obj %}
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Update current time every minute
+    function updateCurrentTime() {
+        const now = new Date();
+        const timeString = now.toLocaleTimeString('ka-GE', { hour: '2-digit', minute: '2-digit' });
+        if (document.getElementById('current-time')) {
+            document.getElementById('current-time').textContent = timeString;
+        }
+    }
+    
+    setInterval(updateCurrentTime, 60000);
+    updateCurrentTime();
+
+    // Prevent double submission of check-in/check-out forms
+    const timeTrackingForms = document.querySelectorAll('form[action*="time-tracking"]');
+    timeTrackingForms.forEach(form => {
+        form.addEventListener('submit', function(e) {
+            const button = this.querySelector('button[type="submit"]');
+            if (button) {
+                button.disabled = true;
+                const originalText = button.innerHTML;
+                button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> ' + originalText;
+            }
+        });
+    });
+
+    // Auto-refresh the page every 5 minutes to keep the status updated
+    setInterval(function() {
+        location.reload();
+    }, 300000); // 5 minutes
+});
+</script>
+{% endblock %} 

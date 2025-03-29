@@ -1,0 +1,246 @@
+{% extends 'hr_app/base.html' %}
+{% load django_bootstrap5 %}
+{% load i18n %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/material_blue.css">
+<style>
+    .form-card {
+        background: linear-gradient(145deg, #ffffff, #f5f7fa);
+        border-radius: 20px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        border: 1px solid rgba(255,255,255,0.8);
+        backdrop-filter: blur(10px);
+        padding: 2rem;
+    }
+    
+    .form-section {
+        background: white;
+        border-radius: 15px;
+        padding: 25px;
+        margin-bottom: 25px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    
+    .form-section:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+    }
+    
+    .section-title {
+        color: #2c3e50;
+        margin-bottom: 25px;
+        padding-bottom: 15px;
+        border-bottom: 3px solid #3498db;
+        font-size: 1.5rem;
+        position: relative;
+    }
+    
+    .section-title::after {
+        content: '';
+        position: absolute;
+        bottom: -3px;
+        left: 0;
+        width: 50px;
+        height: 3px;
+        background: #e74c3c;
+    }
+    
+    .form-floating {
+        margin-bottom: 1.5rem;
+    }
+    
+    .form-floating > label {
+        color: #34495e;
+        font-weight: 500;
+    }
+    
+    .form-control, .form-select {
+        border-radius: 10px;
+        border: 2px solid #eee;
+        padding: 12px;
+        transition: all 0.3s ease;
+    }
+    
+    .form-control:focus, .form-select:focus {
+        border-color: #3498db;
+        box-shadow: 0 0 0 0.25rem rgba(52, 152, 219, 0.2);
+        transform: translateY(-2px);
+    }
+    
+    .date-picker-icon {
+        position: absolute;
+        right: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #3498db;
+        cursor: pointer;
+        z-index: 4;
+        font-size: 1.2rem;
+        transition: color 0.3s ease;
+    }
+    
+    .date-picker-icon:hover {
+        color: #2980b9;
+    }
+    
+    .submit-btn {
+        background: linear-gradient(45deg, #3498db, #2980b9);
+        border: none;
+        padding: 15px 40px;
+        font-size: 1.2rem;
+        border-radius: 50px;
+        transition: all 0.3s ease;
+        color: white;
+        font-weight: 600;
+        letter-spacing: 1px;
+        box-shadow: 0 5px 15px rgba(52, 152, 219, 0.3);
+    }
+    
+    .submit-btn:hover {
+        background: linear-gradient(45deg, #2980b9, #3498db);
+        transform: translateY(-3px);
+        box-shadow: 0 8px 25px rgba(52, 152, 219, 0.4);
+    }
+
+    .page-title {
+        font-size: 2.5rem;
+        color: #2c3e50;
+        text-align: center;
+        margin-bottom: 2rem;
+        font-weight: 700;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .form-floating > .form-control:focus ~ label,
+    .form-floating > .form-control:not(:placeholder-shown) ~ label {
+        color: #3498db;
+        font-weight: 600;
+    }
+
+    /* Custom styles for flatpickr */
+    .flatpickr-calendar {
+        border-radius: 15px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        border: 1px solid rgba(255,255,255,0.8);
+    }
+
+    .flatpickr-day.selected {
+        background: #3498db;
+        border-color: #3498db;
+    }
+
+    .flatpickr-day:hover {
+        background: rgba(52, 152, 219, 0.2);
+    }
+
+    .date-input-container {
+        position: relative;
+    }
+    .calendar-icon {
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        cursor: pointer;
+        color: #6c757d;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0">{% trans "თანამშრომლის დამატება" %}</h2>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header bg-light">
+            <h5 class="mb-0">{% trans "შეავსეთ თანამშრომლის ინფორმაცია" %}</h5>
+        </div>
+        <div class="card-body">
+            <form method="post" novalidate>
+                {% csrf_token %}
+                
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <h6 class="mb-3">{% trans "პირადი ინფორმაცია" %}</h6>
+                        {% bootstrap_field form.first_name layout="floating" %}
+                        {% bootstrap_field form.last_name layout="floating" %}
+                        {% bootstrap_field form.email layout="floating" %}
+                        
+                        <!-- Custom password field that doesn't use bootstrap_field -->
+                        <div class="form-floating mb-3">
+                            <input type="password" name="password" id="id_password" class="form-control" placeholder="Password" required>
+                            <label for="id_password">{% trans "პაროლი" %}</label>
+                        </div>
+                        
+                        <!-- Handle birth_date and gender fields conditionally if they exist -->
+                        {% if form.birth_date %}
+                            {% bootstrap_field form.birth_date layout="floating" %}
+                        {% endif %}
+                        
+                        {% if form.gender %}
+                            {% bootstrap_field form.gender layout="floating" %}
+                        {% endif %}
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <h6 class="mb-3">{% trans "სამსახურის ინფორმაცია" %}</h6>
+                        {% if form.department %}
+                            {% bootstrap_field form.department layout="floating" %}
+                        {% endif %}
+                        
+                        {% if form.job_title %}
+                            {% bootstrap_field form.job_title layout="floating" %}
+                        {% endif %}
+                        
+                        {% if form.salary %}
+                            {% bootstrap_field form.salary layout="floating" %}
+                        {% endif %}
+                        
+                        {% if form.start_date %}
+                            {% bootstrap_field form.start_date layout="floating" %}
+                        {% endif %}
+                        
+                        {% if form.status %}
+                            {% bootstrap_field form.status layout="floating" %}
+                        {% endif %}
+                        
+                        {% if form.address %}
+                            {% bootstrap_field form.address layout="floating" %}
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="d-flex justify-content-end">
+                    <a href="{% url 'employee-list' %}" class="btn btn-outline-secondary me-2">{% trans "გაუქმება" %}</a>
+                    <button type="submit" class="btn btn-primary">{% trans "შენახვა" %}</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/ka.js"></script>
+<script>
+    // Initialize datepickers
+    document.addEventListener('DOMContentLoaded', function() {
+        // Find date inputs and initialize flatpickr
+        const dateInputs = document.querySelectorAll('input[type="date"]');
+        dateInputs.forEach(input => {
+            flatpickr(input, {
+                dateFormat: "Y-m-d",
+                allowInput: true,
+                locale: "ka"
+            });
+        });
+    });
+</script>
+{% endblock %} 

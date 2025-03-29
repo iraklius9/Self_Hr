@@ -1,0 +1,276 @@
+/* Date picker styling */
+.flatpickr-calendar {
+    background: #fff;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    border-radius: 8px;
+}
+
+.flatpickr-day.selected {
+    background: #0d6efd;
+    border-color: #0d6efd;
+}
+
+.flatpickr-day:hover {
+    background: #e9ecef;
+}
+
+.flatpickr-current-month {
+    font-size: 1.2em;
+    font-weight: 500;
+}
+
+.flatpickr-weekday {
+    font-weight: 500;
+    color: #6c757d;
+}
+
+/* Form styling */
+.card {
+    border: none;
+    box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.075);
+}
+
+.card-header {
+    border-bottom: none;
+    padding: 1.5rem;
+}
+
+.card-body {
+    padding: 2rem;
+}
+
+.form-control {
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    border: 1px solid #dee2e6;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.form-control:focus {
+    border-color: #80bdff;
+    box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+}
+
+.btn {
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 500;
+}
+
+.btn-primary {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+}
+
+.btn-primary:hover {
+    background-color: #0b5ed7;
+    border-color: #0a58ca;
+}
+
+.was-validated .form-control:invalid {
+    border-color: #dc3545;
+    padding-right: calc(1.5em + 0.75rem);
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' width='12' height='12' fill='none' stroke='%23dc3545'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath stroke-linejoin='round' d='M5.8 3.6h.4L6 6.5z'/%3e%3ccircle cx='6' cy='8.2' r='.6' fill='%23dc3545' stroke='none'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right calc(0.375em + 0.1875rem) center;
+    background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
+}
+
+/* Enhanced Form Styling */
+.form-floating > .form-control,
+.form-floating > .form-select {
+    height: calc(3.5rem + 2px);
+    line-height: 1.25;
+}
+
+.form-floating {
+    position: relative;
+    margin-bottom: 1rem;
+}
+
+.form-floating > label {
+    position: absolute;
+    top: 0;
+    left: 0;
+    padding: 1rem;
+    pointer-events: none;
+    transform-origin: 0 0;
+    transition: opacity .1s ease-in-out,transform .1s ease-in-out;
+}
+
+.form-floating > .form-control:focus ~ label,
+.form-floating > .form-control:not(:placeholder-shown) ~ label,
+.form-floating > .form-select ~ label {
+    transform: scale(.85) translateY(-0.5rem) translateX(0.15rem);
+    background-color: white;
+    padding: 0 0.5rem;
+    height: auto;
+}
+
+.form-section {
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.form-section:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.section-title {
+    position: relative;
+    padding-bottom: 0.5rem;
+}
+
+.section-title::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 50px;
+    height: 2px;
+    background: #0d6efd;
+}
+
+/* Calendar Styling */
+.flatpickr-calendar.material_blue {
+    box-shadow: 0 3px 15px rgba(0,0,0,0.1);
+    border-radius: 12px;
+    border: none;
+    overflow: hidden;
+}
+
+.flatpickr-day.selected,
+.flatpickr-day.selected:hover {
+    background: #0d6efd !important;
+    border-color: #0d6efd !important;
+    color: white !important;
+}
+
+.flatpickr-day:hover {
+    background: #e9ecef;
+    border-color: transparent;
+}
+
+.flatpickr-current-month {
+    padding: 1rem 0;
+    font-size: 1.25rem;
+}
+
+.flatpickr-monthDropdown-months {
+    background: transparent;
+    border: none;
+    padding: 0.5rem;
+}
+
+/* Button hover effects */
+.btn {
+    transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(13, 110, 253, 0.2);
+}
+
+.btn-outline-secondary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(108, 117, 125, 0.2);
+}
+
+/* New modern form styles */
+.custom-form {
+    background: #ffffff;
+    transition: all 0.3s ease;
+}
+
+.form-header {
+    position: relative;
+    overflow: hidden;
+}
+
+.form-header::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 4px;
+    background: linear-gradient(90deg, #2c3e50, #3498db);
+}
+
+/* Enhanced calendar styling */
+.flatpickr-calendar {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    box-shadow: 0 15px 30px rgba(0,0,0,0.2) !important;
+}
+
+.flatpickr-day {
+    border-radius: 8px;
+    margin: 2px;
+    height: 40px;
+    line-height: 40px;
+}
+
+.flatpickr-day.selected {
+    background: #2c3e50 !important;
+    border-color: #2c3e50 !important;
+}
+
+.flatpickr-day:hover {
+    background: #f0f2f5 !important;
+}
+
+/* Animation keyframes */
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-10px); }
+    75% { transform: translateX(10px); }
+}
+
+.shake {
+    animation: shake 0.4s ease-in-out;
+}
+
+/* Form section hover effects */
+.form-section {
+    transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+}
+
+.form-section:hover {
+    transform: translateY(-5px);
+}
+
+/* Custom button styles */
+.btn-custom {
+    transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
+}
+
+.btn-custom:active {
+    transform: scale(0.95);
+}
+
+/* Input focus effects */
+.form-control:focus {
+    box-shadow: 0 0 0 3px rgba(44, 62, 80, 0.15);
+}
+
+/* Required field indicator animation */
+.required-field::after {
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+
+.date-picker-icon {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    color: #6c757d;
+} 

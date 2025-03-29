@@ -1,46 +1,151 @@
 {% extends 'hr_app/base.html' %}
 {% load django_bootstrap5 %}
+{% load i18n %}
 
 {% block content %}
-<div class="container mt-4">
+<div class="container-fluid py-4">
     {% if employee %}
-        {# Show employee dashboard content #}
-        <div class="row">
-            <div class="col-md-4">
+        <div class="row g-4 mb-4">
+            <div class="col-xl-3 col-sm-6">
                 <div class="card">
-                    <div class="card-header">
-                        <h5>პროფილი</h5>
-                    </div>
                     <div class="card-body">
-                        <p>სახელი: {{ employee.first_name }}</p>
-                        <p>გვარი: {{ employee.last_name }}</p>
-                        <p>თანამდებობა: {{ employee.job_title }}</p>
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div>
+                                <h6 class="text-muted mb-2">{% trans "თანამშრომლები" %}</h6>
+                                <h4 class="mb-0">{{ total_employees }}</h4>
+                            </div>
+                            <div class="avatar avatar-lg rounded bg-primary-subtle">
+                                <i class="bi bi-people fs-3"></i>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
-            <!-- Other dashboard cards -->
+        </div>
+
+        {% if request.user.role.role in 'admin,hr_manager' %}
+        <div class="row g-4 mb-4">
+            <div class="col-xl-6">
+                <div class="card h-100">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">{% trans "ბოლო აქტივობები" %}</h5>
+                        <a href="{% url 'time-tracking' %}" class="btn btn-sm btn-primary">{% trans "ყველა" %}</a>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>{% trans "თარიღი" %}</th>
+                                        <th>{% trans "შემოსვლა" %}</th>
+                                        <th>{% trans "გასვლა" %}</th>
+                                        <th>{% trans "სამუშაო საათები" %}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for log in recent_time_logs %}
+                                    <tr>
+                                        <td>{{ log.check_in|date:"d M Y" }}</td>
+                                        <td>{{ log.check_in|time:"H:i" }}</td>
+                                        <td>{{ log.check_out|time:"H:i"|default:"-" }}</td>
+                                        <td>{{ log.duration_hours|floatformat:2 }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-xl-6">
+                <div class="card h-100">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            {% trans "შვებულების მოთხოვნები" %}
+                            {% if active_leaves %}
+                            <span class="badge bg-success ms-2">{{ active_leaves }} {% trans "აქტიური" %}</span>
+                            {% endif %}
+                        </h5>
+                        <a href="{% url 'leave-request-list' %}" class="btn btn-sm btn-primary">{% trans "ყველა" %}</a>
+                    </div>
+                    <div class="card-body">
+                        {% if leave_requests %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>{% trans "თარიღი" %}</th>
+                                        <th>{% trans "ტიპი" %}</th>
+                                        <th>{% trans "თანამშრომელი" %}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for request in leave_requests %}
+                                    <tr>
+                                        <td>{{ request.submitted_at|date:"d M Y" }}</td>
+                                        <td>{{ request.get_leave_type_display }}</td>
+                                        <td>{{ request.employee.get_full_name }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="text-center py-4">
+                            <i class="bi bi-calendar-check fs-2 text-muted mb-2"></i>
+                            <p>{% trans "შვებულების მოთხოვნები არ არის" %}</p>
+                            <a href="{% url 'leave-request-create' %}" class="btn btn-primary btn-sm">{% trans "ახალი მოთხოვნა" %}</a>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="row g-4">
+            {% if news %}
+            <div class="col-xl-8">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h5 class="mb-0">{% trans "სიახლეები" %}</h5>
+                    </div>
+                    <div class="card-body">
+                        {% for item in news %}
+                        <div class="news-item {% if not forloop.last %}border-bottom{% endif %} pb-3 mb-3">
+                            <h6>{{ item.title }}</h6>
+                            <p class="text-muted small mb-2">{{ item.posted_at|date:"d M Y" }}</p>
+                            <p class="mb-0">{{ item.content|truncatewords:30 }}</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if notifications %}
+            <div class="col-xl-4">
+                <div class="card h-100">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">{% trans "შეტყობინებები" %}</h5>
+                        <span class="badge bg-danger">{{ notifications|length }}</span>
+                    </div>
+                    <div class="card-body">
+                        {% for notification in notifications %}
+                        <div class="notification-item {% if not forloop.last %}border-bottom{% endif %} pb-2 mb-2">
+                            <p class="mb-1">{{ notification.message }}</p>
+                            <small class="text-muted">{{ notification.created_at|date:"d M Y H:i" }}</small>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
         </div>
     {% else %}
-        <div class="alert alert-info">
-            <h4>გთხოვთ დაელოდოთ პროფილის აქტივაციას</h4>
-            <p>თქვენი პროფილი განხილვის პროცესშია. HR მენეჯერი მალე დაამტკიცებს მას.</p>
-        </div>
-    {% endif %}
-
-    {% if user.role.role in 'admin,hr_manager' %}
-        {# Show admin/HR manager specific content #}
-        <div class="row mt-4">
-            <div class="col-md-4">
-                <div class="card">
-                    <div class="card-header">
-                        <h5>სტატისტიკა</h5>
-                    </div>
-                    <div class="card-body">
-                        <p>თანამშრომლების რაოდენობა: {{ total_employees }}</p>
-                        <p>განხილვის პროცესში: {{ pending_leaves }}</p>
-                    </div>
-                </div>
-            </div>
+        <div class="alert alert-warning">
+            {% trans "თქვენ არ გაქვთ თანამშრომლის პროფილი. დაუკავშირდით ადმინისტრატორს." %}
         </div>
     {% endif %}
 </div>
